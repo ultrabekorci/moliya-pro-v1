@@ -1,0 +1,111 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* Kichik Dashboard stillari */
+  .dash-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    transition: 0.3s;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .dash-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+  
+  .card-icon {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    margin-bottom: 15px;
+  }
+  
+  .bg-soft-success { background: #e0ffef; color: #2bd47d; }
+  .bg-soft-danger { background: #ffe0e0; color: #e05260; }
+  .bg-soft-primary { background: #e6f0ff; color: #3b76ef; }
+  
+  .stat-label { font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; }
+  .stat-value { font-size: 28px; font-weight: 700; color: #333; margin-top: 5px; }
+  
+  /* Grafik konteynerlari */
+  .chart-container {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+  }
+</style>
+
+<div class="container-fluid p-4">
+  
+  <div class="d-flex align-items-center justify-content-between mb-4">
+     <h4 class="fw-bold text-dark m-0">Joriy Oy Statistikasi</h4>
+     <span class="badge bg-primary px-3 py-2 rounded-pill" id="current-date-badge">...</span>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="dash-card border-bottom border-4 border-success">
+        <div class="d-flex justify-content-between">
+           <div>
+             <div class="stat-label">Jami Kirim</div>
+             <div class="stat-value text-success" id="dash-kirim">0</div>
+           </div>
+           <div class="card-icon bg-soft-success"><i class='bx bx-trending-up'></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="dash-card border-bottom border-4 border-danger">
+        <div class="d-flex justify-content-between">
+           <div>
+             <div class="stat-label">Jami Xarajat</div>
+             <div class="stat-value text-danger" id="dash-chiqim">0</div>
+           </div>
+           <div class="card-icon bg-soft-danger"><i class='bx bx-trending-down'></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="dash-card border-bottom border-4 border-primary">
+        <div class="d-flex justify-content-between">
+           <div>
+             <div class="stat-label">Sof Foyda</div>
+             <div class="stat-value text-primary" id="dash-foyda">0</div>
+           </div>
+           <div class="card-icon bg-soft-primary"><i class='bx bx-wallet'></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+       <div class="chart-container">
+          <h6 class="fw-bold text-secondary mb-3">Yillik Dinamika (Kirim vs Chiqim)</h6>
+          
+          <div style="position: relative; height: 350px; width: 100%;">
+              <canvas id="yearChart"></canvas>
+          </div>
+          
+       </div>
+    </div>
+
+    <div class="col-lg-4">
+       <div class="chart-container">
+          <h6 class="fw-bold text-secondary mb-3">Savdo Nuqtalari Ulushi</h6>
+          
+          <div style="position: relative; height: 350px; display: flex; justify-content: center;">
+             <canvas id="pointChart"></canvas>
+          </div>
+          
+       </div>
+    </div>
+  </div>
+
+</div>

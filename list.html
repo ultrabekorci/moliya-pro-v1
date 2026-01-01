@@ -1,0 +1,210 @@
+<div class="container-fluid p-0">
+  
+  <div class="bg-white p-3 border-bottom sticky-top shadow-sm" style="top: 0; z-index: 100;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="h5 fw-bold mb-0 text-secondary" style="font-family: 'Poppins', sans-serif;">
+        <i class='bx bx-data text-primary'></i> Operatsiyalar
+      </div>
+      <button class="btn text-white fw-bold shadow-sm px-4" 
+              style="background-color: var(--active-color); border: none; transition: all 0.3s ease;" 
+              onclick="openModal('add')">
+        <i class='bx bx-plus-circle'></i> Yangisini qo'shish
+      </button>
+    </div>
+
+    <div class="btn-group-custom d-flex gap-2">
+      <button class="btn-custom active-kirim rounded shadow-sm" onclick="setTransactionType('Kirim', this)">
+        KIRIM
+      </button>
+      <button class="btn-custom rounded shadow-sm" onclick="setTransactionType('Chiqim', this)">
+        CHIQIM
+      </button>
+      <button class="btn-custom rounded shadow-sm" onclick="setTransactionType('Otkazma', this)">
+        O'TKAZMA
+      </button>
+    </div>
+  </div>
+
+  <div class="px-3 pt-3">
+    <div class="row g-3">
+      <div class="col-md-4 col-12">
+        <div class="bg-white p-3 rounded shadow-sm border-start border-4 border-success d-flex align-items-center justify-content-between">
+           <div>
+              <div class="text-muted small fw-bold text-uppercase">Naqd Pul (Kassa)</div>
+              <div class="h4 mb-0 fw-bold text-dark" id="bal-naqd">Yuklanmoqda...</div>
+           </div>
+           <div class="bg-light p-3 rounded-circle text-success">
+              <i class='bx bx-money fs-3'></i>
+           </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4 col-12">
+        <div class="bg-white p-3 rounded shadow-sm border-start border-4 border-primary d-flex align-items-center justify-content-between">
+           <div>
+              <div class="text-muted small fw-bold text-uppercase">P2P Hisob</div>
+              <div class="h4 mb-0 fw-bold text-dark" id="bal-p2p">Yuklanmoqda...</div>
+           </div>
+           <div class="bg-light p-3 rounded-circle text-primary">
+              <i class='bx bx-credit-card fs-3'></i>
+           </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 col-12">
+        <div class="bg-white p-3 rounded shadow-sm border-start border-4 border-warning d-flex align-items-center justify-content-between">
+           <div>
+              <div class="text-muted small fw-bold text-uppercase">Dollar ($)</div>
+              <div class="h4 mb-0 fw-bold text-dark" id="bal-dollar">Yuklanmoqda...</div>
+           </div>
+           <div class="bg-light p-3 rounded-circle text-warning">
+              <i class='bx bx-dollar fs-3'></i>
+           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-3">
+    <div class="bg-white p-3 rounded shadow-sm border mb-3">
+      <div class="row g-2">
+        <div class="col-md-4 col-12">
+          <label class="small text-muted fw-bold">QIDIRUV</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><i class='bx bx-search'></i></span>
+            <input type="text" id="filter-search" class="form-control border-start-0" placeholder="Izoh, savdo nuqtasi yoki summa" onkeyup="renderCurrentView()">
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <label class="small text-muted fw-bold">BOSHLANISH</label>
+          <input type="date" id="filter-start" class="form-control" onchange="renderCurrentView()">
+        </div>
+        <div class="col-md-3 col-6">
+          <label class="small text-muted fw-bold">TUGASH</label>
+          <input type="date" id="filter-end" class="form-control" onchange="renderCurrentView()">
+        </div>
+        <div class="col-md-2 col-12 d-flex align-items-end">
+          <button class="btn btn-light border w-100 fw-bold text-secondary" onclick="resetFilters()">
+            <i class='bx bx-reset'></i> CLEAR
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive bg-white rounded shadow-sm border custom-table-container">
+      <table class="table table-hover align-middle mb-0 text-center" id="main-table">
+        <thead></thead>
+        <tbody id="table-body" class="fw-bold text-secondary">
+          <tr><td colspan="11" class="p-4">Ma'lumotlar yuklanmoqda...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="transModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      
+      <div class="modal-header text-white py-3" style="background-color: var(--active-color);">
+        <h6 class="modal-title fw-bold" id="modalTitle">Tranzaksiya</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      
+      <div class="modal-body p-4">
+        <form id="mainForm" onsubmit="handleFormSubmit(event)">
+          <input type="hidden" id="editRowId">
+          <input type="hidden" id="formMode" value="add"> 
+          <input type="hidden" id="currentTab" value="Kirim">
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="small text-muted fw-bold">SANA</label>
+              <input type="date" class="form-control" id="dateInput" required>
+            </div>
+            <div class="col-6" id="div-point">
+              <label class="small text-muted fw-bold">SAVDO NUQTASI</label>
+              <select class="form-select" id="d-point"></select>
+            </div>
+          </div>
+
+          <div id="form-kirim" style="display:none;">
+             <div class="bg-light p-3 rounded border">
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-4 fw-bold text-success">NAQD</div>
+                    <div class="col-8"><input type="number" step="0.01" class="form-control pay-input" data-type="Naqd"></div>
+                </div>
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-4 fw-bold text-primary">P2P</div>
+                    <div class="col-8"><input type="number" step="0.01" class="form-control pay-input" data-type="P2P"></div>
+                </div>
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-4 fw-bold text-info">UZCARD</div>
+                    <div class="col-8"><input type="number" step="0.01" class="form-control pay-input" data-type="Uzcard"></div>
+                </div>
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-4 fw-bold text-warning">HUMO</div>
+                    <div class="col-8"><input type="number" step="0.01" class="form-control pay-input" data-type="Humo"></div>
+                </div>
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-4 fw-bold text-secondary">PERECH.</div>
+                    <div class="col-8"><input type="number" step="0.01" class="form-control pay-input" data-type="Perechislenie"></div>
+                </div>
+             </div>
+             <div class="d-flex justify-content-between mt-3 px-2 border-top pt-2">
+               <span class="fw-bold">JAMI:</span><span class="fw-bold text-success fs-5" id="batch-total">0</span>
+             </div>
+          </div>
+
+          <div id="form-single" style="display:none;">
+            
+            <div id="div-transfer-fields" style="display: none;" class="mb-3">
+               <div class="row g-2">
+                   <div class="col-6">
+                       <label class="small text-muted fw-bold text-danger">QAYERDAN</label>
+                       <select class="form-select" id="transfer-from" onchange="checkTransferCurrency()"></select>
+                   </div>
+                   <div class="col-6">
+                       <label class="small text-muted fw-bold text-success">QAYERGA</label>
+                       <select class="form-select" id="transfer-to" onchange="checkTransferCurrency()"></select>
+                   </div>
+               </div>
+            </div>
+
+            <div class="mb-3">
+               <label class="small text-muted fw-bold" id="label-amount-main">SUMMA (UZS)</label>
+               <input type="number" step="0.01" class="form-control fs-4 fw-bold text-danger" id="single-amount">
+            </div>
+
+            <div class="mb-3" id="div-second-amount" style="display: none;">
+               <label class="small text-muted fw-bold text-primary">SUMMA (USD)</label>
+               <input type="number" step="0.01" class="form-control fs-4 fw-bold text-primary" id="second-amount">
+               <div class="text-danger small fw-bold mt-1">
+                   <i class='bx bx-info-circle'></i> Summani AQSH dollarida kiriting!
+               </div>
+            </div>
+            
+            <div id="div-cat" class="mb-3">
+               <label class="small text-muted fw-bold">KATEGORIYA</label>
+               <select class="form-select" id="d-cat"></select>
+            </div>
+            <div id="div-pay" class="mb-3">
+               <label class="small text-muted fw-bold">TO'LOV USULI</label>
+               <select class="form-select" id="d-pay"></select>
+            </div>
+
+          </div>
+
+          <div class="mt-4">
+            <label class="small text-muted fw-bold">IZOH</label>
+            <input type="text" class="form-control" id="noteInput" placeholder="Izoh qo'shish...">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 mt-4 btn-save py-2 fw-bold shadow-sm" style="background-color: var(--active-color); border:none;">
+            SAQLASH
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
