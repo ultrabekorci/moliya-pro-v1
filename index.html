@@ -7,6 +7,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <?!= include('css'); ?>
@@ -142,9 +143,6 @@
         }
         
         /* Ijtimoiy tarmoq tugmalari logikasi: */
-        /* Dark modeda tugma foni oq (yoki light), shuning uchun ikonka QORA bo'lishi kerak */
-        /* Biz oldin majburan oq qilgandik, shuni olib tashlaymiz */
-        
         body.dark-mode .social-btn {
             background-color: #f8fafc !important; /* Tugma oq/och */
             border-color: #334155 !important;
@@ -158,7 +156,7 @@
 
         /* =========================================
            5. UMUMIY STYLES
-        ========================================= */
+        ======================================== */
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
             background: radial-gradient(circle at center, #1e3c72 0%, #2a5298 0%, #0A2558 80%);
@@ -346,7 +344,10 @@
         </div>
 
         <div class="home-content">
-            <div id="view-dashboard"> <?!= include('dashboard'); ?> </div>
+            <div id="view-dashboard" class="container-fluid p-0">
+                <?!= include('dashboard'); ?>
+            </div>
+
             <div id="view-list" style="display: none;"> <?!= include('list'); ?> </div>
 
             <div id="view-about" style="display: none;">
