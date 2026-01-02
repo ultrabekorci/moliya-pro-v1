@@ -1,111 +1,242 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-  /* Kichik Dashboard stillari */
-  .dash-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    transition: 0.3s;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-  }
-  .dash-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+  /* Dashboard maxsus stillari */
+  .dash-filter-bar { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px; }
   
-  .card-icon {
-    width: 50px; height: 50px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    margin-bottom: 15px;
-  }
+  .kpi-card { background: #fff; border-radius: 16px; padding: 20px; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: transform 0.3s; height: 100%; border: 1px solid #eef2f7; }
+  .kpi-card:hover { transform: translateY(-5px); }
+  .kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 10px; }
+  .kpi-title { font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: #1e293b; margin: 5px 0; }
+  .kpi-trend { font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; }
   
-  .bg-soft-success { background: #e0ffef; color: #2bd47d; }
-  .bg-soft-danger { background: #ffe0e0; color: #e05260; }
-  .bg-soft-primary { background: #e6f0ff; color: #3b76ef; }
+  .chart-box { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); height: 100%; margin-bottom: 20px; border: 1px solid #eef2f7; }
+  .chart-title { font-size: 16px; font-weight: 700; color: #334155; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+
+  /* Ranglar */
+  .bg-indigo-light { background: #e0e7ff; color: #4338ca; }
+  .bg-emerald-light { background: #d1fae5; color: #059669; }
+  .bg-rose-light { background: #ffe4e6; color: #be123c; }
+  .bg-amber-light { background: #fef3c7; color: #d97706; }
   
-  .stat-label { font-size: 14px; color: #888; font-weight: 600; text-transform: uppercase; }
-  .stat-value { font-size: 28px; font-weight: 700; color: #333; margin-top: 5px; }
-  
-  /* Grafik konteynerlari */
-  .chart-container {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-  }
+  .text-trend-up { color: #10b981; background: #ecfdf5; }
+  .text-trend-down { color: #ef4444; background: #fef2f2; }
 </style>
 
-<div class="container-fluid p-4">
-  
-  <div class="d-flex align-items-center justify-content-between mb-4">
-     <h4 class="fw-bold text-dark m-0">Joriy Oy Statistikasi</h4>
-     <span class="badge bg-primary px-3 py-2 rounded-pill" id="current-date-badge">...</span>
+<div class="container-fluid p-0">
+
+  <div class="dash-filter-bar d-flex flex-wrap gap-3 align-items-end">
+    
+    <div style="min-width: 200px;">
+      <label class="small text-muted fw-bold mb-1">Vaqt Oralig'i</label>
+      <select id="filter-period" class="form-select shadow-sm" onchange="applyDashFilters()">
+        <option value="this_month" selected>Joriy Oy</option>
+        <option value="last_month">O'tgan Oy</option>
+        <option value="this_year">Joriy Yil</option>
+        <option value="last_year">O'tgan Yil</option>
+        <option value="custom">Ixtiyoriy sana...</option>
+      </select>
+    </div>
+
+    <div id="custom-date-box" class="d-none d-flex gap-2">
+      <div>
+        <label class="small text-muted fw-bold mb-1">Dan</label>
+        <input type="date" id="date-start" class="form-control shadow-sm" onchange="applyDashFilters()">
+      </div>
+      <div>
+        <label class="small text-muted fw-bold mb-1">Gacha</label>
+        <input type="date" id="date-end" class="form-control shadow-sm" onchange="applyDashFilters()">
+      </div>
+    </div>
+
+    <div style="min-width: 200px;">
+      <label class="small text-muted fw-bold mb-1">Firma (Entity)</label>
+      <select id="filter-firm" class="form-select shadow-sm" onchange="applyDashFilters()">
+        <option value="all" selected>Barchasi (Umumiy)</option>
+        <option value="Greenpen">Greenpen MChJ</option>
+        <option value="Smartmiz">Smartmiz MChJ</option>
+      </select>
+    </div>
+
+    <div class="ms-auto text-end">
+        <button class="btn btn-primary shadow-sm" onclick="loadDashboard()"><i class='bx bx-refresh'></i> Yangilash</button>
+    </div>
   </div>
 
   <div class="row g-4 mb-4">
-    <div class="col-md-4">
-      <div class="dash-card border-bottom border-4 border-success">
+    <div class="col-md-6 col-xl-3">
+      <div class="kpi-card">
         <div class="d-flex justify-content-between">
-           <div>
-             <div class="stat-label">Jami Kirim</div>
-             <div class="stat-value text-success" id="dash-kirim">0</div>
-           </div>
-           <div class="card-icon bg-soft-success"><i class='bx bx-trending-up'></i></div>
+          <div>
+            <div class="kpi-title">Jami Tushum</div>
+            <div class="kpi-value" id="kpi-income">0</div>
+            <div class="kpi-trend" id="trend-income">Hozircha 0%</div>
+          </div>
+          <div class="kpi-icon bg-indigo-light"><i class='bx bx-trending-up'></i></div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="dash-card border-bottom border-4 border-danger">
+    <div class="col-md-6 col-xl-3">
+      <div class="kpi-card">
         <div class="d-flex justify-content-between">
-           <div>
-             <div class="stat-label">Jami Xarajat</div>
-             <div class="stat-value text-danger" id="dash-chiqim">0</div>
-           </div>
-           <div class="card-icon bg-soft-danger"><i class='bx bx-trending-down'></i></div>
+          <div>
+            <div class="kpi-title">Jami Xarajat</div>
+            <div class="kpi-value text-danger" id="kpi-expense">0</div>
+            <small class="text-muted" style="font-size: 11px;">* Umumiy xarajatlar taqsimlandi</small>
+          </div>
+          <div class="kpi-icon bg-rose-light"><i class='bx bx-trending-down'></i></div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="dash-card border-bottom border-4 border-primary">
+    <div class="col-md-6 col-xl-3">
+      <div class="kpi-card">
         <div class="d-flex justify-content-between">
-           <div>
-             <div class="stat-label">Sof Foyda</div>
-             <div class="stat-value text-primary" id="dash-foyda">0</div>
-           </div>
-           <div class="card-icon bg-soft-primary"><i class='bx bx-wallet'></i></div>
+          <div>
+            <div class="kpi-title">Sof Pul Oqimi</div>
+            <div class="kpi-value" id="kpi-net-cash">0</div>
+            <div class="kpi-trend" id="trend-profit">Foyda</div>
+          </div>
+          <div class="kpi-icon bg-emerald-light"><i class='bx bx-wallet'></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="kpi-title">Naqd Pul Ulushi</div>
+            <div class="kpi-value text-warning" id="kpi-cash-ratio">0%</div>
+            <small class="text-muted">Likvidlik darajasi</small>
+          </div>
+          <div class="kpi-icon bg-amber-light"><i class='bx bx-pie-chart-alt-2'></i></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="row g-4">
+  <div class="row g-4 mb-4">
+    
     <div class="col-lg-8">
-       <div class="chart-container">
-          <h6 class="fw-bold text-secondary mb-3">Yillik Dinamika (Kirim vs Chiqim)</h6>
-          
-          <div style="position: relative; height: 350px; width: 100%;">
-              <canvas id="yearChart"></canvas>
-          </div>
-          
-       </div>
+      <div class="chart-box">
+        <div class="chart-title">
+           <span><i class='bx bx-line-chart text-primary me-2'></i> Kirim vs Chiqim</span>
+        </div>
+        <div style="height: 300px;">
+          <canvas id="chartTrend"></canvas>
+        </div>
+      </div>
     </div>
 
-    <div class="col-lg-4">
-       <div class="chart-container">
-          <h6 class="fw-bold text-secondary mb-3">Savdo Nuqtalari Ulushi</h6>
-          
-          <div style="position: relative; height: 350px; display: flex; justify-content: center;">
-             <canvas id="pointChart"></canvas>
+   <div class="col-lg-4">
+          <div class="chart-box">
+            <div class="chart-title">
+               <span><i class='bx bx-pie-chart-alt-2 text-danger me-2'></i> Top 5 Xarajatlar</span>
+            </div>
+            
+            <div class="d-flex align-items-center justify-content-between">
+                
+                <div style="width: 60%; height: 280px; position: relative;">
+                  <canvas id="chartExpenses"></canvas>
+                </div>
+
+                <div style="width: 40%; padding-left: 10px;" class="text-end">
+                    <div class="mb-4">
+                        <span class="text-muted small fw-bold d-block">TOP-5 JAMI:</span>
+                        <span id="top5-sum-display" class="fw-bold text-dark fs-5">0</span>
+                    </div>
+                    
+                    <div>
+                        <span class="text-muted small fw-bold d-block">ULUSHI:</span>
+                        <span id="top5-percent-display" class="fw-bolder text-danger fs-2">0%</span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted" style="font-size: 10px;">Jami xarajatga nisbatan</small>
+                    </div>
+                </div>
+
+            </div>
           </div>
-          
-       </div>
+        </div>
+
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="chart-box">
+          <div class="chart-title">
+            <span><i class='bx bx-bar-chart-square text-danger me-2'></i> Barcha Xarajatlar (To'liq Ro'yxat)</span>
+          </div>
+          <div style="height: 400px;"> 
+            <canvas id="chartAllExpenses"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div class="col-lg-6">
+      <div class="chart-box">
+        <div class="chart-title">
+           <span><i class='bx bx-building-house text-primary me-2'></i> Firmalar Tushumi</span>
+        </div>
+        <div style="height: 300px;">
+          <canvas id="chartPoints"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="chart-box">
+        <div class="chart-title">
+           <span><i class='bx bx-doughnut-chart text-warning me-2'></i> To'lov Turlari </span>
+        </div>
+        
+        <div class="d-flex align-items-center">
+            
+            <div style="width: 50%; height: 260px; position: relative;">
+              <canvas id="chartPayments"></canvas>
+            </div>
+
+            <div id="pay-legend-container" style="width: 50%; padding-left: 20px; max-height: 260px; overflow-y: auto;">
+                </div>
+
+        </div>
+      </div>
     </div>
   </div>
-
+  <div class="row mt-4 mb-4">
+      <div class="col-12">
+        <div class="chart-box">
+          <div class="chart-title">
+            <span><i class='bx bx-stats text-primary me-2'></i> Savdo nuqtasi Dinamikasi (Kirim)</span>
+            <select id="chart-point-select" class="form-select form-select-sm border-primary text-primary fw-bold" style="width: 250px; cursor: pointer;" onchange="renderSpecificPointChart()">
+               <option>Yuklanmoqda...</option>
+            </select>
+          </div>
+          <div style="height: 350px;">
+            <canvas id="chartSpecific"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white py-3">
+       <h6 class="mb-0 fw-bold"><i class='bx bx-table'></i> Operatsiyalar Ro'yxati (Tanlangan filtr bo'yicha)</h6>
+    </div>
+    <div class="table-responsive" style="max-height: 400px;">
+      <table class="table table-hover align-middle mb-0 text-center small">
+        <thead class="table-light sticky-top">
+           <tr>
+             <th>Sana</th>
+             <th>Firma / Nuqta</th>
+             <th>Kategoriya</th>
+             <th>To'lov</th>
+             <th>Kirim</th>
+             <th>Chiqim</th>
+           </tr>
+        </thead>
+        <tbody id="dash-table-body">
+           </tbody>
+      </table>
+    </div>
+  </div>
 </div>
