@@ -11,6 +11,9 @@
     
     --primary-light: #0d6efd;
     --hover-color: #081D45;
+    
+    /* Yangi Dashboard uchun ranglar */
+    --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
   }
 
   /* Mavzuga qarab o'zgaruvchan rangni almashtiramiz */
@@ -130,150 +133,155 @@
     .home-section{ width: calc(100% - 60px); left: 60px; }
     .home-section nav{ width: calc(100% - 60px); left: 60px; }
   }
+
   /* === ABOUT PRO === */
-.about-pro {
-  background:
-    radial-gradient(circle at top right, #e0e7ff, transparent 40%),
-    radial-gradient(circle at bottom left, #ecfeff, transparent 40%);
-}
+  .about-pro {
+    background:
+      radial-gradient(circle at top right, #e0e7ff, transparent 40%),
+      radial-gradient(circle at bottom left, #ecfeff, transparent 40%);
+  }
 
-.about-hero {
-  display: flex;
-  justify-content: center;
-}
+  .about-hero { display: flex; justify-content: center; }
+  .hero-glass {
+    max-width: 900px; padding: 50px; border-radius: 32px;
+    background: rgba(255,255,255,0.75); backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.08); text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #eef2ff; color: #4f46e5; padding: 8px 16px;
+    border-radius: 999px; font-weight: 600; font-size: 14px;
+  }
+  .hero-title { font-size: 48px; font-weight: 800; margin: 20px 0; letter-spacing: -1px; }
+  .hero-title span { background: linear-gradient(90deg, #4f46e5, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero-subtitle { font-size: 18px; color: #475569; }
 
-.hero-glass {
-  max-width: 900px;
-  padding: 50px;
-  border-radius: 32px;
-  background: rgba(255,255,255,0.75);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 30px 80px rgba(0,0,0,0.08);
-  text-align: center;
-}
+  .bento-pro {
+    background: #fff; border-radius: 28px; padding: 30px; height: 100%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06); transition: 0.3s;
+  }
+  .bento-pro:hover { transform: translateY(-6px); box-shadow: 0 25px 60px rgba(0,0,0,0.12); }
+  .bento-pro.gradient { background: linear-gradient(145deg, #eef2ff, #f8fafc); }
+  .bento-pro h4 { font-weight: 700; margin-bottom: 12px; }
+  .bento-pro p { color: #64748b; }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #eef2ff;
-  color: #4f46e5;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 14px;
-}
+  .icon-box {
+    width: 56px; height: 56px; border-radius: 16px; display: flex;
+    align-items: center; justify-content: center; font-size: 26px; margin-bottom: 16px;
+  }
+  .icon-box.blue { background:#eff6ff; color:#3b82f6; }
+  .icon-box.purple { background:#f3e8ff; color:#a855f7; }
+  .icon-box.green { background:#ecfdf5; color:#22c55e; }
+  .icon-box.orange { background:#fff7ed; color:#f97316; }
 
-.hero-title {
-  font-size: 48px;
-  font-weight: 800;
-  margin: 20px 0;
-  letter-spacing: -1px;
-}
+  .about-list { padding-left: 0; list-style: none; }
+  .about-list li { padding: 6px 0; font-weight: 600; color: #334155; }
+  .tech-stack span {
+    display: inline-block; padding: 8px 14px; border-radius: 10px;
+    background: #f1f5f9; font-weight: 600; margin: 6px 6px 0 0; font-size: 13px;
+  }
+  .developer-card { display: flex; align-items: center; gap: 25px; }
+  .dev-avatar {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: linear-gradient(135deg,#4f46e5,#22d3ee); display: flex;
+    align-items: center; justify-content: center; font-size: 40px; color: #fff;
+  }
+  .dev-role { font-weight: 700; color: #4f46e5; margin-bottom: 6px; }
+  .dev-quote { font-style: italic; color: #475569; margin-bottom: 14px; }
 
-.hero-title span {
-  background: linear-gradient(90deg, #4f46e5, #22d3ee);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+  /* =========================================
+     YANGI DASHBOARD STILLARI (V2.0)
+  ========================================= */
+  
+  .dash-filter-bar { 
+    background: #fff; 
+    padding: 15px; 
+    border-radius: 12px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03); 
+    margin-bottom: 20px; 
+  }
+  
+  /* KPI KARTALAR */
+  .kpi-card { 
+    background: #fff; 
+    border-radius: 16px; 
+    padding: 20px; 
+    position: relative; 
+    overflow: hidden; 
+    box-shadow: var(--card-shadow); 
+    transition: transform 0.3s; 
+    height: 100%; 
+    border: 1px solid #eef2f7;
+  }
+  .kpi-card:hover { transform: translateY(-5px); }
+  
+  .kpi-icon { 
+    width: 48px; height: 48px; 
+    border-radius: 12px; 
+    display: flex; align-items: center; justify-content: center; 
+    font-size: 24px; margin-bottom: 10px; 
+  }
+  
+  .kpi-title { 
+    font-size: 13px; font-weight: 600; 
+    color: #64748b; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+  }
+  
+  .kpi-value { 
+    font-size: 24px; font-weight: 800; 
+    color: #1e293b; margin: 5px 0; 
+  }
+  
+  .kpi-trend { 
+    font-size: 12px; font-weight: 600; 
+    display: inline-flex; align-items: center; gap: 4px; 
+    padding: 2px 8px; border-radius: 20px; 
+  }
+  
+  /* GRAFIK QUTISI */
+  .chart-box { 
+    background: #fff; 
+    border-radius: 16px; 
+    padding: 20px; 
+    box-shadow: var(--card-shadow); 
+    height: 100%; 
+    margin-bottom: 20px; 
+    border: 1px solid #eef2f7;
+  }
+  .chart-title { 
+    font-size: 16px; font-weight: 700; 
+    color: #334155; 
+    margin-bottom: 15px; 
+    display: flex; justify-content: space-between; align-items: center; 
+  }
 
-.hero-subtitle {
-  font-size: 18px;
-  color: #475569;
-}
+  /* UTILITY RANGLAR */
+  .bg-indigo-light { background: #e0e7ff; color: #4338ca; }
+  .bg-emerald-light { background: #d1fae5; color: #059669; }
+  .bg-rose-light { background: #ffe4e6; color: #be123c; }
+  .bg-amber-light { background: #fef3c7; color: #d97706; }
+  
+  .text-trend-up { color: #10b981; background: #ecfdf5; }
+  .text-trend-down { color: #ef4444; background: #fef2f2; }
 
-.bento-pro {
-  background: #fff;
-  border-radius: 28px;
-  padding: 30px;
-  height: 100%;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-  transition: 0.3s;
-}
-
-.bento-pro:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 25px 60px rgba(0,0,0,0.12);
-}
-
-.bento-pro.gradient {
-  background: linear-gradient(145deg, #eef2ff, #f8fafc);
-}
-
-.bento-pro h4 {
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-.bento-pro p {
-  color: #64748b;
-}
-
-.icon-box {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  margin-bottom: 16px;
-}
-
-.icon-box.blue { background:#eff6ff; color:#3b82f6; }
-.icon-box.purple { background:#f3e8ff; color:#a855f7; }
-.icon-box.green { background:#ecfdf5; color:#22c55e; }
-.icon-box.orange { background:#fff7ed; color:#f97316; }
-
-.about-list {
-  padding-left: 0;
-  list-style: none;
-}
-
-.about-list li {
-  padding: 6px 0;
-  font-weight: 600;
-  color: #334155;
-}
-
-.tech-stack span {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 10px;
-  background: #f1f5f9;
-  font-weight: 600;
-  margin: 6px 6px 0 0;
-  font-size: 13px;
-}
-
-.developer-card {
-  display: flex;
-  align-items: center;
-  gap: 25px;
-}
-
-.dev-avatar {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: linear-gradient(135deg,#4f46e5,#22d3ee);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  color: #fff;
-}
-
-.dev-role {
-  font-weight: 700;
-  color: #4f46e5;
-  margin-bottom: 6px;
-}
-
-.dev-quote {
-  font-style: italic;
-  color: #475569;
-  margin-bottom: 14px;
-}
+  /* DARK MODE UCHUN DASHBOARD FIXLARI */
+  body.dark-mode .dash-filter-bar,
+  body.dark-mode .kpi-card,
+  body.dark-mode .chart-box {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #fff !important;
+  }
+  
+  body.dark-mode .kpi-title,
+  body.dark-mode .chart-title span {
+      color: #fff !important;
+  }
+  
+  body.dark-mode .kpi-value {
+      color: #fff !important;
+  }
 
 </style>
