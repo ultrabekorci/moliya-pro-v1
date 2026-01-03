@@ -309,7 +309,6 @@
     const niceColors = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
     
     // --- DARK MODE ANIQLASH VA RANGLAR ---
-    // Agar sizda dark mode klassi boshqacha bo'lsa, 'dark-mode' ni o'zgartiring
     const isDarkMode = document.body.classList.contains('dark-mode'); 
     const chartTextColor = isDarkMode ? '#ffffff' : '#666666'; // Oq yoki to'q kulrang
     const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'; // Panjara chiziqlari
@@ -487,9 +486,219 @@
   function setTransactionType(type, btnElement) { CURRENT_TYPE = type; const buttons = document.querySelectorAll('.btn-custom'); buttons.forEach(btn => btn.classList.remove('active-kirim', 'active-chiqim', 'active-boshqa')); const body = document.body; body.classList.remove('theme-green', 'theme-red', 'theme-blue'); if (type === 'Kirim') { body.classList.add('theme-green'); if(btnElement) btnElement.classList.add('active-kirim'); else { let btn = document.querySelector('.btn-custom:nth-child(1)'); if(btn) btn.classList.add('active-kirim'); } } else if (type === 'Chiqim') { body.classList.add('theme-red'); if(btnElement) btnElement.classList.add('active-chiqim'); else { let btn = document.querySelector('.btn-custom:nth-child(2)'); if(btn) btn.classList.add('active-chiqim'); } } else { body.classList.add('theme-blue'); if(btnElement) btnElement.classList.add('active-boshqa'); else { let btn = document.querySelector('.btn-custom:nth-child(3)'); if(btn) btn.classList.add('active-boshqa'); } } renderCurrentView(); }
   function refreshList() { const tbody = document.getElementById('table-body'); if(tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3">Yuklanmoqda...</td></tr>`; google.script.run.withSuccessHandler(saveAndRender).getTransactionsList(); }
   function saveAndRender(data) { ALL_DATA = data || []; renderCurrentView(); }
-  function renderCurrentView() { try { const thead = document.querySelector('#main-table thead'); const tbody = document.getElementById('table-body'); if(!thead || !tbody) return; tbody.innerHTML = ""; GROUPED_DATA = []; let html = ""; let index = 1; if (CURRENT_TYPE === 'Kirim') { thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Savdo Nuqtasi</th><th class="th-green">Naqd</th><th class="th-teal">P2P</th><th class="th-blue">Uzcard</th><th class="th-yellow">Humo</th><th class="th-gray">Perech.</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-gray">Izoh</th></tr>`; let filteredItems = ALL_DATA.filter(item => { return item.cat === "Savdo tushumi" && parseMoney(item.kirim) > 0 && checkFilter(item); }); let grouped = {}; filteredItems.forEach(item => { let key = item.rowId || ("temp_" + item.date + item.point); if (!grouped[key]) { grouped[key] = { rowId: item.rowId, date: item.date, point: item.point, note: item.note, naqd: 0, p2p: 0, uzcard: 0, humo: 0, perech: 0, total: 0 }; } let val = parseMoney(item.kirim); let pType = String(item.pay).toLowerCase(); if(pType.includes('naqd')) grouped[key].naqd += val; else if(pType.includes('p2p')) grouped[key].p2p += val; else if(pType.includes('uzcard')) grouped[key].uzcard += val; else if(pType.includes('humo')) grouped[key].humo += val; else if(pType.includes('perech')) grouped[key].perech += val; else grouped[key].naqd += val; grouped[key].total += val; }); let groupedList = Object.values(grouped); groupedList.sort((a, b) => new Date(b.date) - new Date(a.date)); if (groupedList.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } groupedList.forEach((item, idx) => { GROUPED_DATA.push(item); let idParam = item.rowId ? `'${item.rowId}'` : "null"; html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.point}">${truncate(item.point, 30)}</td><td class="text-success">${item.naqd > 0 ? fmt(item.naqd) : '-'}</td><td class="text-primary">${item.p2p > 0 ? fmt(item.p2p) : '-'}</td><td class="text-info">${item.uzcard > 0 ? fmt(item.uzcard) : '-'}</td><td class="text-warning">${item.humo > 0 ? fmt(item.humo) : '-'}</td><td class="text-secondary">${item.perech > 0 ? fmt(item.perech) : '-'}</td><td class="fw-bold text-primary fs-5">${fmt(item.total)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editGroup(${idx})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small text-start">${truncate(item.note, 20)}</td></tr>`; }); } else if (CURRENT_TYPE === 'Chiqim') { thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Kategoriya</th><th class="th-gray">To'lov Turi</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-dark">Izoh</th></tr>`; let filteredData = ALL_DATA.filter(item => { return parseMoney(item.chiqim) > 0 && !item.cat.includes("O'tkazma") && item.cat !== 'Transfer' && checkFilter(item); }); if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } filteredData.forEach(item => { let idParam = item.rowId ? `'${item.rowId}'` : "null"; html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.cat}">${truncate(item.cat, 30)}</td><td>${item.pay}</td><td class="fw-bold text-danger fs-5">${fmt(item.chiqim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small text-start">${truncate(item.note, 20)}</td></tr>`; }); } else { thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-red">Qayerdan</th><th class="th-green">Qayerga</th><th class="th-red">Chiqim</th><th class="th-green">Kirim</th><th class="th-action">Amal</th><th class="th-dark">Izoh</th></tr>`; let filteredData = ALL_DATA.filter(item => { return (item.cat === "Transfer" || item.cat.includes("O'tkazma")) && checkFilter(item); }); if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } filteredData.forEach(item => { let idParam = item.rowId ? `'${item.rowId}'` : "null"; let fromTxt = "-"; let toTxt = "-"; if(item.pay && item.pay.includes('->')) { let p = item.pay.split('->'); fromTxt = p[0]; toTxt = p[1]; } html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold text-danger">${fromTxt}</td><td class="fw-bold text-success">${toTxt}</td><td class="fw-bold text-danger">${fmt(item.chiqim)}</td><td class="fw-bold text-success">${fmt(item.kirim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small text-start">${truncate(item.note, 20)}</td></tr>`; }); } tbody.innerHTML = html; } catch(err) { console.error("Render Error:", err); document.getElementById('table-body').innerHTML = `<tr><td colspan="11" class="text-danger p-3">Xatolik: ${err.message}</td></tr>`; } }
-  function handleFormSubmit(e) { e.preventDefault(); const btn = document.querySelector('.btn-save'); const type = document.getElementById('currentTab').value; const mode = document.getElementById('formMode').value; const note = document.getElementById('noteInput').value; const point = document.getElementById('d-point').value; function showError(msg) { Swal.fire({ icon: 'warning', title: 'Diqqat!', text: msg, confirmButtonColor: '#d33', confirmButtonText: 'Tushunarli' }); } if ((type === 'Kirim' || type === 'Chiqim') && document.getElementById('div-point').style.display !== 'none') { if (!point || point === '') { showError("Iltimos, SAVDO NUQTASINI tanlang!"); return; } } if (note.length > LIMIT_IZOH) { showError(`Izoh juda uzun! Maksimal ${LIMIT_IZOH} ta harf.`); return; } let formData = { rowId: document.getElementById('editRowId').value, type: type, date: document.getElementById('dateInput').value, point: point, firm: "", note: note }; if (type === 'Kirim') { let payments = {}; let hasVal = false; let totalSum = 0; let inputs = document.querySelectorAll('.pay-input'); for (let inp of inputs) { let v = parseFloat(inp.value) || 0; if (v > 0) { if (v > LIMIT_SUMMA) { showError(`Xatolik! ${inp.getAttribute('data-type')} uchun kiritilgan summa juda katta!`); return; } payments[inp.getAttribute('data-type')] = v; hasVal = true; totalSum += v; } } if(!hasVal) { showError("Iltimos, kamida bitta summa kiriting!"); return; } if (totalSum > LIMIT_SUMMA) { showError(`Xatolik! Jami summa cheklovdan oshib ketdi!`); return; } formData.payments = payments; } else { let amt = parseFloat(document.getElementById('single-amount').value) || 0; if (amt > LIMIT_SUMMA) { showError(`Summa juda katta!`); return; } if (amt <= 0) { showError("Summa kiriting!"); return; } if (type === 'Chiqim') { formData.amount = amt; formData.category = document.getElementById('d-cat').value; formData.payment = document.getElementById('d-pay').value; } else if (type === 'Otkazma') { let tFrom = document.getElementById('transfer-from').value; let tTo = document.getElementById('transfer-to').value; if(!tFrom || tFrom === '') { showError("Tanlang!"); return; } if(!tTo || tTo === '') { showError("Tanlang!"); return; } if(tFrom === tTo) { showError("Bir xil hisob!"); return; } formData.amount = amt; formData.amountIn = parseFloat(document.getElementById('second-amount').value) || 0; formData.transferFrom = tFrom; formData.transferTo = tTo; formData.point = "O'tkazma"; } } btn.disabled = true; btn.innerHTML = "<span class='spinner-border spinner-border-sm'></span> Saqlanmoqda..."; google.script.run.withSuccessHandler(function() { transModal.hide(); refreshList(); loadDashboard(); loadBalances(); btn.disabled = false; btn.innerText = "SAQLASH"; Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false }); }).withFailureHandler(function(err) { Swal.fire({ icon: 'error', title: 'Xatolik', text: err }); btn.disabled = false; btn.innerText = "SAQLASH"; }).saveTransaction(formData); }
-  function openModal(mode) { document.getElementById('mainForm').reset(); document.getElementById('formMode').value = mode; let now = new Date(); let today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; document.getElementById('dateInput').value = today; if(document.getElementById('batch-total')) document.getElementById('batch-total').innerText = "0"; transModal = new bootstrap.Modal(document.getElementById('transModal')); setupFormUI(CURRENT_TYPE); if (mode === 'add') { document.getElementById('modalTitle').innerText = "Yangi " + CURRENT_TYPE + " Qo'shish"; document.getElementById('editRowId').value = ""; } transModal.show(); }
+  
+  // --- LIST RENDER WITH DATE SORTING FIX ---
+  function renderCurrentView() { 
+    try { 
+      const thead = document.querySelector('#main-table thead'); 
+      const tbody = document.getElementById('table-body'); 
+      if(!thead || !tbody) return; 
+      tbody.innerHTML = ""; 
+      GROUPED_DATA = []; 
+      let html = ""; 
+      let index = 1; 
+
+      const noteStyle = 'style="width: 150px; min-width: 150px; max-width: 150px; white-space: normal; word-wrap: break-word; font-size: 11px; line-height: 1.2; text-align: left;"';
+      const noteHeaderStyle = 'style="width: 150px; min-width: 150px; max-width: 150px;"';
+
+      if (CURRENT_TYPE === 'Kirim') { 
+        thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Savdo Nuqtasi</th><th class="th-green">Naqd</th><th class="th-teal">P2P</th><th class="th-blue">Uzcard</th><th class="th-yellow">Humo</th><th class="th-gray">Perech.</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-gray" ${noteHeaderStyle}>Izoh</th></tr>`; 
+        
+        let filteredItems = ALL_DATA.filter(item => { return item.cat === "Savdo tushumi" && parseMoney(item.kirim) > 0 && checkFilter(item); }); 
+        let grouped = {}; 
+        filteredItems.forEach(item => { let key = item.rowId || ("temp_" + item.date + item.point); if (!grouped[key]) { grouped[key] = { rowId: item.rowId, date: item.date, point: item.point, note: item.note, naqd: 0, p2p: 0, uzcard: 0, humo: 0, perech: 0, total: 0 }; } let val = parseMoney(item.kirim); let pType = String(item.pay).toLowerCase(); if(pType.includes('naqd')) grouped[key].naqd += val; else if(pType.includes('p2p')) grouped[key].p2p += val; else if(pType.includes('uzcard')) grouped[key].uzcard += val; else if(pType.includes('humo')) grouped[key].humo += val; else if(pType.includes('perech')) grouped[key].perech += val; else grouped[key].naqd += val; grouped[key].total += val; }); 
+        let groupedList = Object.values(grouped); 
+        // SORTING: Newest First
+        groupedList.sort((a, b) => new Date(b.date) - new Date(a.date)); 
+        
+        if (groupedList.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
+        
+        groupedList.forEach((item, idx) => { 
+            GROUPED_DATA.push(item); 
+            let idParam = item.rowId ? `'${item.rowId}'` : "null"; 
+            html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.point}">${truncate(item.point, 30)}</td><td class="text-success">${item.naqd > 0 ? fmt(item.naqd) : '-'}</td><td class="text-primary">${item.p2p > 0 ? fmt(item.p2p) : '-'}</td><td class="text-info">${item.uzcard > 0 ? fmt(item.uzcard) : '-'}</td><td class="text-warning">${item.humo > 0 ? fmt(item.humo) : '-'}</td><td class="text-secondary">${item.perech > 0 ? fmt(item.perech) : '-'}</td><td class="fw-bold text-primary fs-5">${fmt(item.total)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editGroup(${idx})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`; 
+        }); 
+      } else if (CURRENT_TYPE === 'Chiqim') { 
+        thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Kategoriya</th><th class="th-gray">To'lov Turi</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`; 
+        
+        let filteredData = ALL_DATA.filter(item => { return parseMoney(item.chiqim) > 0 && !item.cat.includes("O'tkazma") && item.cat !== 'Transfer' && checkFilter(item); }); 
+        
+        // --- FIX ADDED HERE: SORT BY DATE ---
+        filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
+        
+        filteredData.forEach(item => { 
+            let idParam = item.rowId ? `'${item.rowId}'` : "null"; 
+            html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.cat}">${truncate(item.cat, 30)}</td><td>${item.pay}</td><td class="fw-bold text-danger fs-5">${fmt(item.chiqim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`; 
+        }); 
+      } else { 
+        thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-red">Qayerdan</th><th class="th-green">Qayerga</th><th class="th-red">Chiqim</th><th class="th-green">Kirim</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`; 
+        
+        let filteredData = ALL_DATA.filter(item => { return (item.cat === "Transfer" || item.cat.includes("O'tkazma")) && checkFilter(item); }); 
+        
+        // --- FIX ADDED HERE: SORT BY DATE ---
+        filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
+        
+        filteredData.forEach(item => { 
+            let idParam = item.rowId ? `'${item.rowId}'` : "null"; 
+            let fromTxt = "-"; let toTxt = "-"; 
+            if(item.pay && item.pay.includes('->')) { let p = item.pay.split('->'); fromTxt = p[0]; toTxt = p[1]; } 
+            html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold text-danger">${fromTxt}</td><td class="fw-bold text-success">${toTxt}</td><td class="fw-bold text-danger">${fmt(item.chiqim)}</td><td class="fw-bold text-success">${fmt(item.kirim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`; 
+        }); 
+      } 
+      tbody.innerHTML = html; 
+    } catch(err) { 
+        console.error("Render Error:", err); 
+        document.getElementById('table-body').innerHTML = `<tr><td colspan="11" class="text-danger p-3">Xatolik: ${err.message}</td></tr>`; 
+    } 
+  }
+
+  // --- FORM VALIDATION & SUBMIT ---
+  function handleFormSubmit(e) { 
+    e.preventDefault(); 
+    const btn = document.querySelector('.btn-save'); 
+    const type = document.getElementById('currentTab').value; 
+    const mode = document.getElementById('formMode').value; 
+    const note = document.getElementById('noteInput').value; 
+    const point = document.getElementById('d-point').value; 
+
+    function showError(msg) { 
+        Swal.fire({ icon: 'warning', iconColor: '#d33', title: 'Diqqat!', text: msg, confirmButtonColor: '#d33', confirmButtonText: 'Tushunarli' }); 
+    } 
+
+    // 1. Point Validatsiyasi (faqat Point ko'rinadigan joyda)
+    if ((type === 'Kirim' || type === 'Chiqim') && document.getElementById('div-point').style.display !== 'none') { 
+        if (!point || point === '') { 
+            showError("Iltimos, SAVDO NUQTASINI tanlang!"); 
+            return; 
+        } 
+    } 
+
+    // 2. Izoh validatsiyasi
+    if (note.length > LIMIT_IZOH) { 
+        showError(`Izoh juda uzun! Maksimal ${LIMIT_IZOH} ta harf.`); 
+        return; 
+    } 
+
+    let formData = { 
+        rowId: document.getElementById('editRowId').value, 
+        type: type, 
+        date: document.getElementById('dateInput').value, 
+        point: point, 
+        firm: "", 
+        note: note 
+    }; 
+
+    // --- KIRIM LOGIKASI ---
+    if (type === 'Kirim') { 
+        let payments = {}; 
+        let hasVal = false; 
+        let totalSum = 0; 
+        let inputs = document.querySelectorAll('.pay-input'); 
+        for (let inp of inputs) { 
+            let v = parseFloat(inp.value) || 0; 
+            if (v > 0) { 
+                if (v > LIMIT_SUMMA) { 
+                    showError(`Xatolik! ${inp.getAttribute('data-type')} uchun kiritilgan summa juda katta!`); 
+                    return; 
+                } 
+                payments[inp.getAttribute('data-type')] = v; 
+                hasVal = true; 
+                totalSum += v; 
+            } 
+        } 
+        if(!hasVal) { 
+            showError("Iltimos, kamida bitta summa kiriting!"); 
+            return; 
+        } 
+        if (totalSum > LIMIT_SUMMA) { 
+            showError(`Xatolik! Jami summa cheklovdan oshib ketdi!`); 
+            return; 
+        } 
+        formData.payments = payments; 
+    } 
+    // --- CHIQIM VA O'TKAZMA LOGIKASI ---
+    else { 
+        let amt = parseFloat(document.getElementById('single-amount').value) || 0; 
+        if (amt > LIMIT_SUMMA) { showError(`Summa juda katta!`); return; } 
+        if (amt <= 0) { showError("Summa kiriting!"); return; } 
+
+        if (type === 'Chiqim') { 
+            // --- VALIDATSIYA: Kategoriya va To'lov usuli ---
+            let catVal = document.getElementById('d-cat').value;
+            let payVal = document.getElementById('d-pay').value;
+
+            if (!catVal || catVal === '') {
+                showError("Iltimos, KATEGORIYANI tanlang!");
+                return;
+            }
+            if (!payVal || payVal === '') {
+                showError("Iltimos, TO'LOV USULINI tanlang!");
+                return;
+            }
+            // --- FIX END ---
+            
+            formData.amount = amt; 
+            formData.category = catVal; 
+            formData.payment = payVal; 
+        } else if (type === 'Otkazma') { 
+            let tFrom = document.getElementById('transfer-from').value; 
+            let tTo = document.getElementById('transfer-to').value; 
+            if(!tFrom || tFrom === '') { showError("Tanlang!"); return; } 
+            if(!tTo || tTo === '') { showError("Tanlang!"); return; } 
+            if(tFrom === tTo) { showError("Bir xil hisob!"); return; } 
+            formData.amount = amt; 
+            formData.amountIn = parseFloat(document.getElementById('second-amount').value) || 0; 
+            formData.transferFrom = tFrom; 
+            formData.transferTo = tTo; 
+            formData.point = "O'tkazma"; 
+        } 
+    } 
+
+    // Saqlash jarayoni
+    btn.disabled = true; 
+    btn.innerHTML = "<span class='spinner-border spinner-border-sm'></span> Saqlanmoqda..."; 
+
+    google.script.run.withSuccessHandler(function() { 
+        transModal.hide(); 
+        refreshList(); 
+        loadDashboard(); 
+        loadBalances(); 
+        btn.disabled = false; 
+        btn.innerText = "SAQLASH"; 
+        Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false }); 
+    }).withFailureHandler(function(err) { 
+        Swal.fire({ icon: 'error', title: 'Xatolik', text: err }); 
+        btn.disabled = false; 
+        btn.innerText = "SAQLASH"; 
+    }).saveTransaction(formData); 
+  }
+
+  // --- MODAL OCHISH (Sanani bugungi kunga cheklash) ---
+  function openModal(mode) { 
+    document.getElementById('mainForm').reset(); 
+    document.getElementById('formMode').value = mode; 
+    
+    let now = new Date(); 
+    let today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
+    
+    const dateInput = document.getElementById('dateInput');
+    dateInput.value = today; 
+    dateInput.max = today; // <--- Sana tanlashni bugungi kun bilan cheklaydi
+
+    if(document.getElementById('batch-total')) document.getElementById('batch-total').innerText = "0"; 
+    transModal = new bootstrap.Modal(document.getElementById('transModal')); 
+    setupFormUI(CURRENT_TYPE); 
+    if (mode === 'add') { 
+        document.getElementById('modalTitle').innerText = "Yangi " + CURRENT_TYPE + " Qo'shish"; 
+        document.getElementById('editRowId').value = ""; 
+    } 
+    transModal.show(); 
+  }
+
   function setupFormUI(type) { document.getElementById('currentTab').value = type; ['form-kirim','form-single'].forEach(id=>document.getElementById(id).style.display='none'); document.getElementById('div-point').style.display = (type==='Kirim')?'block':'none'; if(type==='Kirim') document.getElementById('form-kirim').style.display='block'; else { document.getElementById('form-single').style.display='block'; document.getElementById('div-cat').style.display = (type==='Chiqim')?'block':'none'; document.getElementById('div-pay').style.display = (type==='Chiqim')?'block':'none'; document.getElementById('div-transfer-fields').style.display = (type==='Otkazma')?'block':'none'; document.getElementById('label-amount-main').innerText = (type==='Otkazma')?"SUMMA (UZS)":"SUMMA"; } }
   function editGroup(index) { let item = GROUPED_DATA[index]; if(!item) return; setTransactionType('Kirim'); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = item.rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('d-point').value = item.point; document.getElementById('noteInput').value = item.note; setPayInput('Naqd', item.naqd); setPayInput('P2P', item.p2p); setPayInput('Uzcard', item.uzcard); setPayInput('Humo', item.humo); setPayInput('Perechislenie', item.perech); calcBatchTotal(); }
   function editItem(rowId) { const item = ALL_DATA.find(r => r.rowId == rowId); if (!item) return; let type = (item.cat === 'Transfer' || item.cat.includes("O'tkazma")) ? 'Otkazma' : 'Chiqim'; setTransactionType(type); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('noteInput').value = item.note; if(type === 'Chiqim') { document.getElementById('single-amount').value = parseMoney(item.chiqim); document.getElementById('d-pay').value = item.pay; document.getElementById('d-cat').value = item.cat; } else { let k = parseMoney(item.kirim); let c = parseMoney(item.chiqim); let big = (k > c) ? k : c; document.getElementById('single-amount').value = big; if(item.pay && item.pay.includes('->')) { let parts = item.pay.split('->'); document.getElementById('transfer-from').value = parts[0].trim(); document.getElementById('transfer-to').value = parts[1].trim(); } checkTransferCurrency(); } }
