@@ -212,7 +212,6 @@
 
         .profile-trigger { display: flex; align-items: center; gap: 10px; padding: 6px 15px; background: var(--input-bg); border-radius: 30px; border: 1px solid var(--border-color); cursor: pointer; }
         .profile-dropdown-content { display: none; position: fixed; top: 75px; right: 25px; background-color: #fff; min-width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid #e2e8f0; z-index: 9999; padding: 5px 0; }
-        .menu-header { padding: 12px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600; background-color: #f8f9fa; border-radius: 12px 12px 0 0; }
         .logout-btn { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #1e293b; font-weight: 500; width: 100%; background: none; border: none; text-align: left; }
         .logout-btn:hover { background-color: #fff5f5; color: #dc3545; }
         
@@ -337,7 +336,6 @@
         </nav>
 
         <div id="profileDropdown" class="profile-dropdown-content">
-            <div class="menu-header">Profil sozlamalari</div>
             <button class="logout-btn" onclick="logoutSystem()">
                 <i class='bx bx-log-out'></i> Tizimdan Chiqish
             </button>
@@ -470,6 +468,27 @@
         localStorage.setItem('selected-theme', getCurrentTheme());
         localStorage.setItem('selected-icon', getCurrentIcon());
     }
+    // ... (eski kodlar: togglePasswordVisibility, toggleTheme va boshqalar turibdi) ...
+
+    // --- MANA BU KODNI QO'SHING ---
+    function toggleProfileMenu() {
+        var menu = document.getElementById("profileDropdown");
+        menu.classList.toggle("show-menu");
+    }
+
+    // Menyu ochilgandan keyin, chetga bosilsa yopish funksiyasi
+    window.onclick = function(event) {
+        if (!event.target.closest('.profile-trigger')) {
+            var dropdowns = document.getElementsByClassName("profile-dropdown-content");
+            for (var i = 0; i < dropdowns.length; i++) {
+                var openDropdown = dropdowns[i];
+                if (openDropdown.classList.contains('show-menu')) {
+                    openDropdown.classList.remove('show-menu');
+                }
+            }
+        }
+    }
+</script>
 </script>
 </body>
 </html>
