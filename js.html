@@ -23,13 +23,7 @@
   // ==========================================
   // 2. INIT
   // ==========================================
-  window.onload = function() {
-    google.script.run.withSuccessHandler(function(users) { LOCAL_USERS_DB = users; }).getAllUsers();
-    loadBalances();
-    loadDropdowns();
-    try { document.querySelectorAll('.pay-input').forEach(inp => { inp.addEventListener('keyup', calcBatchTotal); }); } catch(e) { console.error(e); }
-    var modalEl = document.getElementById('transModal'); if(modalEl) document.body.appendChild(modalEl);
-  };
+ 
 
   // ==========================================
   // 3. NAVIGATSIYA
@@ -168,10 +162,12 @@
       }
 
       let trendData = {};
+      let totalSum = 0; // JAMI SUMMA
       CACHED_FILTERED.forEach(item => {
           if(item.point === selectedPoint) {
               let inc = parseMoney(item.kirim);
               if(inc > 0) {
+                  totalSum += inc; // SUMMAGA QO'SHISH
                   let key = item.date; 
                   if(isMonthly) key = item.date.substring(0, 7); 
                   if(!trendData[key]) trendData[key] = 0;
@@ -179,6 +175,12 @@
               }
           }
       });
+
+      // JAMI SUMMANI KO'RSATISH
+      const totalDisplay = document.getElementById('specific-point-total');
+      if(totalDisplay) {
+          totalDisplay.innerText = fmt(totalSum) + " so'm";
+      }
 
       let labels = Object.keys(trendData).sort();
       let dataValues = labels.map(l => trendData[l]);
@@ -498,8 +500,8 @@
       let html = ""; 
       let index = 1; 
 
-      const noteStyle = 'style="width: 150px; min-width: 150px; max-width: 150px; white-space: normal; word-wrap: break-word; font-size: 11px; line-height: 1.2; text-align: left;"';
-      const noteHeaderStyle = 'style="width: 150px; min-width: 150px; max-width: 150px;"';
+      const noteStyle = 'style="width: 200px; min-width: 200px; max-width: 200px; white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2; text-align: left;"';
+      const noteHeaderStyle = 'style="width: 200px; min-width: 200px; max-width: 200px;"';
 
       if (CURRENT_TYPE === 'Kirim') { 
         thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Savdo Nuqtasi</th><th class="th-green">Naqd</th><th class="th-teal">P2P</th><th class="th-blue">Uzcard</th><th class="th-yellow">Humo</th><th class="th-gray">Perech.</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-gray" ${noteHeaderStyle}>Izoh</th></tr>`; 
@@ -579,7 +581,7 @@
 
     // 2. Izoh validatsiyasi
     if (note.length > LIMIT_IZOH) { 
-        showError(`Izoh juda uzun! Maksimal ${LIMIT_IZOH} ta harf.`); 
+        showError(`Izoh juda uzun! Maksimal ${LIMIT_IZOH} ta belgi kiritish mumkin!`); 
         return; 
     } 
 
@@ -602,7 +604,7 @@
             let v = parseFloat(inp.value) || 0; 
             if (v > 0) { 
                 if (v > LIMIT_SUMMA) { 
-                    showError(`Xatolik! ${inp.getAttribute('data-type')} uchun kiritilgan summa juda katta!`); 
+                    showError(`Xatolik! ${inp.getAttribute('data-type')} uchun kiritilgan summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`); 
                     return; 
                 } 
                 payments[inp.getAttribute('data-type')] = v; 
@@ -615,7 +617,7 @@
             return; 
         } 
         if (totalSum > LIMIT_SUMMA) { 
-            showError(`Xatolik! Jami summa cheklovdan oshib ketdi!`); 
+            showError(`Xatolik! Jami summa summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`); 
             return; 
         } 
         formData.payments = payments; 
@@ -623,8 +625,8 @@
     // --- CHIQIM VA O'TKAZMA LOGIKASI ---
     else { 
         let amt = parseFloat(document.getElementById('single-amount').value) || 0; 
-        if (amt > LIMIT_SUMMA) { showError(`Summa juda katta!`); return; } 
-        if (amt <= 0) { showError("Summa kiriting!"); return; } 
+        if (amt > LIMIT_SUMMA) { showError(`Summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`); return; } 
+        if (amt <= 0) { showError("Iltimos, kamida bitta summa kiriting!"); return; } 
 
         if (type === 'Chiqim') { 
             // --- VALIDATSIYA: Kategoriya va To'lov usuli ---
@@ -647,9 +649,9 @@
         } else if (type === 'Otkazma') { 
             let tFrom = document.getElementById('transfer-from').value; 
             let tTo = document.getElementById('transfer-to').value; 
-            if(!tFrom || tFrom === '') { showError("Tanlang!"); return; } 
-            if(!tTo || tTo === '') { showError("Tanlang!"); return; } 
-            if(tFrom === tTo) { showError("Bir xil hisob!"); return; } 
+            if(!tFrom || tFrom === '') { showError("Iltimos, pul 'Qayerdan' ketyotganini tanlang!"); return; } 
+            if(!tTo || tTo === '') { showError("Iltimos, pul 'Qayerga' kelyotganini tanlang!"); return; } 
+            if(tFrom === tTo) { showError("Xatolik! Bir xil hisobni tanlash mumkin emas!"); return; } 
             formData.amount = amt; 
             formData.amountIn = parseFloat(document.getElementById('second-amount').value) || 0; 
             formData.transferFrom = tFrom; 
@@ -671,7 +673,7 @@
         btn.innerText = "SAQLASH"; 
         Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false }); 
     }).withFailureHandler(function(err) { 
-        Swal.fire({ icon: 'error', title: 'Xatolik', text: err }); 
+        Swal.fire({ icon: 'error', title: 'Xatolik!', text: err }); 
         btn.disabled = false; 
         btn.innerText = "SAQLASH"; 
     }).saveTransaction(formData); 
@@ -702,5 +704,5 @@
   function setupFormUI(type) { document.getElementById('currentTab').value = type; ['form-kirim','form-single'].forEach(id=>document.getElementById(id).style.display='none'); document.getElementById('div-point').style.display = (type==='Kirim')?'block':'none'; if(type==='Kirim') document.getElementById('form-kirim').style.display='block'; else { document.getElementById('form-single').style.display='block'; document.getElementById('div-cat').style.display = (type==='Chiqim')?'block':'none'; document.getElementById('div-pay').style.display = (type==='Chiqim')?'block':'none'; document.getElementById('div-transfer-fields').style.display = (type==='Otkazma')?'block':'none'; document.getElementById('label-amount-main').innerText = (type==='Otkazma')?"SUMMA (UZS)":"SUMMA"; } }
   function editGroup(index) { let item = GROUPED_DATA[index]; if(!item) return; setTransactionType('Kirim'); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = item.rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('d-point').value = item.point; document.getElementById('noteInput').value = item.note; setPayInput('Naqd', item.naqd); setPayInput('P2P', item.p2p); setPayInput('Uzcard', item.uzcard); setPayInput('Humo', item.humo); setPayInput('Perechislenie', item.perech); calcBatchTotal(); }
   function editItem(rowId) { const item = ALL_DATA.find(r => r.rowId == rowId); if (!item) return; let type = (item.cat === 'Transfer' || item.cat.includes("O'tkazma")) ? 'Otkazma' : 'Chiqim'; setTransactionType(type); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('noteInput').value = item.note; if(type === 'Chiqim') { document.getElementById('single-amount').value = parseMoney(item.chiqim); document.getElementById('d-pay').value = item.pay; document.getElementById('d-cat').value = item.cat; } else { let k = parseMoney(item.kirim); let c = parseMoney(item.chiqim); let big = (k > c) ? k : c; document.getElementById('single-amount').value = big; if(item.pay && item.pay.includes('->')) { let parts = item.pay.split('->'); document.getElementById('transfer-from').value = parts[0].trim(); document.getElementById('transfer-to').value = parts[1].trim(); } checkTransferCurrency(); } }
-  function deleteItem(rowId) { if(!rowId) return; Swal.fire({ title: 'O\'chirasizmi?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ha' }).then((r) => { if(r.isConfirmed) { google.script.run.withSuccessHandler(()=>{ refreshList(); loadDashboard(); loadBalances(); Swal.fire('O\'chirildi!', '', 'success'); }).deleteTransaction(rowId); } }); }
+  function deleteItem(rowId) { if(!rowId) return; Swal.fire({ title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#198754',confirmButtonText: 'Ha',cancelButtonText: 'Yo\'q' }).then((r) => { if(r.isConfirmed) { google.script.run.withSuccessHandler(()=>{ refreshList(); loadDashboard(); loadBalances(); Swal.fire('Muvaffaqiyatli!', '', 'success'); }).deleteTransaction(rowId); } }); }
 </script>
