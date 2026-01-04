@@ -272,7 +272,7 @@
     <form class="login-card" onsubmit="loginSystem(event)">
         <div class="logo-circle"><i class='bx bx-bar-chart-alt-2'></i></div>
         <h4 class="login-title">Xush Kelibsiz!</h4>
-        <p class="login-subtitle">Tizimga kirish uchun login va parolni kiriting</p>
+        <p class="login-subtitle">Tizimga kirish uchun login va parolingizni kiriting!</p>
         
         <div class="form-floating mb-3">
             <input type="text" id="loginUser" name="username" class="form-control" placeholder="Login" autocomplete="username" required>
@@ -337,7 +337,7 @@
 
         <div id="profileDropdown" class="profile-dropdown-content">
             <button class="logout-btn" onclick="logoutSystem()">
-                <i class='bx bx-log-out'></i> Tizimdan Chiqish
+                <i class='bx bx-log-out'></i> Tizimdan chiqish
             </button>
         </div>
 
@@ -405,9 +405,9 @@
                                             <p class="text-primary small fw-bold mb-2">Founder & Developer</p>
                                         </div>
                                     </div>
-                                    <p class="text-muted small mb-3">“Dasturlash — insonlarning ishini yengillashtirish sanʼati.”</p>
+                                    <p class="text-muted small mb-3">“coding is life!”</p>
                                     <div class="d-flex align-items-center flex-wrap gap-2">
-                                        <span class="text-muted small fw-bold text-uppercase me-2" style="font-size: 11px;">Follow Me:</span>
+                                        <span class="text-muted small fw-bold text-uppercase me-2" style="font-size: 11px;">follow Me:</span>
                                         
                                         <a href="https://github.com/ultrabekorci" target="_blank" class="social-btn"><i class='bx bxl-github'></i></a>
                                         <a href="https://t.me/Ultrabekorci" target="_blank" class="social-btn"><i class='bx bxl-telegram text-primary'></i></a>
@@ -425,7 +425,187 @@
 </div>
 
 <?!= include('js'); ?>
+<script>
+// ==========================================
+// SESSION MANAGEMENT (15 DAQIQA)
+// ==========================================
 
+const SESSION_TIMEOUT = 15 * 60 * 1000; // 15 daqiqa (millisekundlarda)
+let sessionTimer;
+
+// Session ni tekshirish va boshlash
+function initSession() {
+    const savedUser = sessionStorage.getItem('moliya_user');
+    const savedRole = sessionStorage.getItem('moliya_role');
+    const lastActivity = sessionStorage.getItem('moliya_last_activity');
+    
+    if (savedUser && savedRole && lastActivity) {
+        const timePassed = Date.now() - parseInt(lastActivity);
+        
+        // Agar 15 daqiqadan kam o'tgan bo'lsa, avtomatik login
+        if (timePassed < SESSION_TIMEOUT) {
+            USER_ROLE = savedRole;
+            if(document.getElementById('user-display')) {
+                document.getElementById('user-display').innerText = savedUser.charAt(0).toUpperCase() + savedUser.slice(1);
+            }
+            
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            
+            applyRolePermissions();
+            loadDashboard();
+            loadDropdowns();
+            refreshList();
+            loadBalances();
+            
+            // Session timerini ishga tushirish
+            startSessionTimer();
+            return true;
+        } else {
+            // Vaqt o'tib ketgan - session tozalash
+            clearSession();
+        }
+    }
+    return false;
+}
+
+// Session timerni boshlash
+function startSessionTimer() {
+    // Avvalgi timerni to'xtatish
+    if (sessionTimer) clearTimeout(sessionTimer);
+    
+    // Oxirgi harakatni yangilash
+    updateLastActivity();
+    
+    // 15 daqiqa kutish
+    sessionTimer = setTimeout(function() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sessiya tugadi!',
+            text: '15 daqiqa harakatsizlik. Iltimos, tizimga qaytadan kiring!',
+            confirmButtonText: 'OK'
+        }).then(() => {
+            logoutSystem();
+        });
+    }, SESSION_TIMEOUT);
+}
+
+// Oxirgi harakatni yangilash
+function updateLastActivity() {
+    sessionStorage.setItem('moliya_last_activity', Date.now().toString());
+}
+
+// Session ni tozalash
+function clearSession() {
+    sessionStorage.removeItem('moliya_user');
+    sessionStorage.removeItem('moliya_role');
+    sessionStorage.removeItem('moliya_last_activity');
+    if (sessionTimer) clearTimeout(sessionTimer);
+}
+
+// Har qanday harakatda timerni qayta boshlash
+function resetSessionTimer() {
+    startSessionTimer();
+}
+
+// ==========================================
+// LOGIN TIZIMINI YANGILASH
+// ==========================================
+function loginSystem(e) {
+    if(e) e.preventDefault();
+    
+    var u = document.getElementById('loginUser').value.toLowerCase().trim();
+    var p = document.getElementById('loginPass').value.trim();
+    var err = document.getElementById('loginError');
+    
+    var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p);
+    
+    if (foundUser) {
+        USER_ROLE = foundUser.r;
+        
+        // SESSION-ga saqlash
+        sessionStorage.setItem('moliya_user', u);
+        sessionStorage.setItem('moliya_role', foundUser.r);
+        sessionStorage.setItem('moliya_last_activity', Date.now().toString());
+        
+        if(document.getElementById('user-display')) {
+            document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1);
+        }
+        
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        
+        applyRolePermissions();
+        loadDashboard();
+        loadDropdowns();
+        refreshList();
+        loadBalances();
+        
+        // Session timerni boshlash
+        startSessionTimer();
+    } else {
+        err.innerText = "Login yoki parol noto'g'ri!";
+    }
+}
+
+// ==========================================
+// LOGOUT TIZIMINI YANGILASH
+// ==========================================
+function logoutSystem() {
+    USER_ROLE = "";
+    ALL_DATA = [];
+    DASH_DATA = [];
+    
+    // Session ni tozalash
+    clearSession();
+    
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ==========================================
+// SAHIFA YUKLANGANDA SESSION TEKSHIRISH
+// ==========================================
+window.addEventListener('load', function() {
+    // Avval session tekshirish
+    const sessionActive = initSession();
+    
+    if (!sessionActive) {
+        // Session yo'q bo'lsa, odatdagi yuklash
+        google.script.run.withSuccessHandler(function(users) { 
+            LOCAL_USERS_DB = users; 
+        }).getAllUsers();
+    }
+    
+    loadBalances();
+    loadDropdowns();
+    
+    try { 
+        document.querySelectorAll('.pay-input').forEach(inp => { 
+            inp.addEventListener('keyup', calcBatchTotal); 
+        }); 
+    } catch(e) { 
+        console.error(e); 
+    }
+    
+    var modalEl = document.getElementById('transModal'); 
+    if(modalEl) document.body.appendChild(modalEl);
+});
+
+// ==========================================
+// HAR QANDAY HARAKATDA TIMERNI QAYTA BOSHLASH
+// ==========================================
+// Mouse harakati
+document.addEventListener('mousemove', resetSessionTimer);
+// Keyboard bosilishi
+document.addEventListener('keypress', resetSessionTimer);
+// Click bosilishi
+document.addEventListener('click', resetSessionTimer);
+// Scroll qilish
+document.addEventListener('scroll', resetSessionTimer);
+// Touch (mobil qurilmalar uchun)
+document.addEventListener('touchstart', resetSessionTimer);
+</script>
 <script>
     function togglePasswordVisibility() {
         const input = document.getElementById("loginPass");
@@ -444,6 +624,7 @@
 
     const selectedTheme = localStorage.getItem('selected-theme');
     const getCurrentTheme = () => document.body.classList.contains(darkTheme) ? 'dark' : 'light';
+    const getCurrentIcon = () => themeButton.classList.contains(iconSun) ? 'bx-sun' : 'bx-moon';
 
     if (selectedTheme === 'dark') {
         document.body.classList.add(darkTheme);
@@ -467,6 +648,13 @@
         }
         localStorage.setItem('selected-theme', getCurrentTheme());
         localStorage.setItem('selected-icon', getCurrentIcon());
+        
+        // Dashboardda bo'lsa, chartlarni qayta render qilish
+        if(document.getElementById('view-dashboard').style.display !== 'none') {
+            setTimeout(function() {
+                applyDashFilters();
+            }, 100);
+        }
     }
     // ... (eski kodlar: togglePasswordVisibility, toggleTheme va boshqalar turibdi) ...
 
