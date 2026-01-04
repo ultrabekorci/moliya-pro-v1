@@ -61,26 +61,30 @@ function getFormData() {
 // ==========================================
 // 3. TRANZAKSIYALARNI SAQLASH
 // ==========================================
+// ==========================================
+// 3. TRANZAKSIYALARNI SAQLASH (SUPER OPTIMIZED)
+// ==========================================
 function saveTransaction(data) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
   var batchId = new Date().getTime().toString(); 
   var dateStr = data.date; 
   var firmVal = data.firm || ""; 
 
-  // --- A) YANGI QO'SHISH ---
+  // --- A) YANGI QO'SHISH (Batch operatsiya - Barcha turlar) ---
   if (!data.rowId || data.rowId === "") {
+      var rowsToAdd = [];
       
       if (data.type === 'Kirim') {
         for (var payType in data.payments) {
           var amount = parseFloat(data.payments[payType]);
           if (amount > 0) {
-            sheet.appendRow([dateStr, firmVal, data.point, "Savdo tushumi", payType, amount, 0, data.note, batchId]);
+            rowsToAdd.push([dateStr, firmVal, data.point, "Savdo tushumi", payType, amount, 0, data.note, batchId]);
           }
         }
       } 
       else if (data.type === 'Chiqim') {
         var chiqim = parseFloat(data.amount);
-        sheet.appendRow([dateStr, firmVal, data.point, data.category, data.payment, 0, chiqim, data.note, batchId]);
+        rowsToAdd.push([dateStr, firmVal, data.point, data.category, data.payment, 0, chiqim, data.note, batchId]);
       } 
       else if (data.type === 'Otkazma') {
         var mainAmount = parseFloat(data.amount);       
@@ -88,83 +92,126 @@ function saveTransaction(data) {
         var source = data.transferFrom; 
         var dest = data.transferTo;     
         
-        var finalChiqim = 0; var finalKirim = 0;
+        var finalChiqim = 0; 
+        var finalKirim = 0;
 
-        if (source === 'Dollar') { finalChiqim = (usdAmount > 0) ? usdAmount : mainAmount; finalKirim = mainAmount; }
-        else if (dest === 'Dollar') { finalChiqim = mainAmount; finalKirim = (usdAmount > 0) ? usdAmount : mainAmount; }
-        else { finalChiqim = mainAmount; finalKirim = mainAmount; }
+        if (source === 'Dollar') { 
+          finalChiqim = (usdAmount > 0) ? usdAmount : mainAmount; 
+          finalKirim = mainAmount; 
+        }
+        else if (dest === 'Dollar') { 
+          finalChiqim = mainAmount; 
+          finalKirim = (usdAmount > 0) ? usdAmount : mainAmount; 
+        }
+        else { 
+          finalChiqim = mainAmount; 
+          finalKirim = mainAmount; 
+        }
 
-        sheet.appendRow([
-          dateStr, firmVal, "Transfer", "O'tkazma", source + " -> " + dest, 
-          finalKirim, finalChiqim, data.note, batchId, source, dest
-        ]);
+        rowsToAdd.push([dateStr, firmVal, "Transfer", "O'tkazma", source + " -> " + dest, finalKirim, finalChiqim, data.note, batchId, source, dest]);
+      }
+      
+      // BIR MARTA QO'SHISH
+      if (rowsToAdd.length > 0) {
+        var lastRow = sheet.getLastRow();
+        var numCols = rowsToAdd[0].length;
+        sheet.getRange(lastRow + 1, 1, rowsToAdd.length, numCols).setValues(rowsToAdd);
       }
   } 
-  // --- B) TAHRIRLASH (EDIT) ---
+  
+  // --- B) TAHRIRLASH (EDIT) - Super Optimized ---
   else {
-      var dataRange = sheet.getDataRange();
-      var values = dataRange.getValues();
+      var lastRow = sheet.getLastRow();
+      if (lastRow < 2) return "No Data";
+      
+      // Faqat ID ustunini o'qish
+      var idRange = sheet.getRange(2, 9, lastRow - 1, 1);
+      var idValues = idRange.getValues();
       var rowIndex = -1;
 
-      // 1. KIRIMNI TAHRIRLASH (YANGI QO'SHILGAN QISM)
+      // 1. KIRIMNI TAHRIRLASH
       if (data.type === 'Kirim') {
-          // Kirim murakkab bo'lgani uchun (bitta chekda bir nechta to'lov turi bo'lishi mumkin),
-          // biz eski ID ga tegishli barcha qatorlarni o'chirib, yangitdan yozamiz.
-          
           var targetId = data.rowId;
-          // Teskari tartibda yurib o'chiramiz (indexlar buzilmasligi uchun)
-          for (var i = values.length - 1; i >= 0; i--) {
-              if (values[i][8] == targetId) { // 8-ustun = ID
-                  sheet.deleteRow(i + 1); // Sheet qator raqami
+          var rowsToDelete = [];
+          
+          for (var i = 0; i < idValues.length; i++) {
+              if (idValues[i][0] == targetId) {
+                  rowsToDelete.push(i + 2);
               }
           }
-          SpreadsheetApp.flush(); // O'chirishni tasdiqlash
+          
+          for (var i = rowsToDelete.length - 1; i >= 0; i--) {
+              sheet.deleteRow(rowsToDelete[i]);
+          }
 
-          // Endi yangi ma'lumotlarni o'sha eski ID bilan yozamiz
+          var rowsToAdd = [];
           for (var payType in data.payments) {
               var amount = parseFloat(data.payments[payType]);
               if (amount > 0) {
-                  sheet.appendRow([data.date, firmVal, data.point, "Savdo tushumi", payType, amount, 0, data.note, targetId]);
+                  rowsToAdd.push([data.date, firmVal, data.point, "Savdo tushumi", payType, amount, 0, data.note, targetId]);
               }
+          }
+          
+          if (rowsToAdd.length > 0) {
+            var lastRow = sheet.getLastRow();
+            sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 9).setValues(rowsToAdd);
           }
       }
       
-      // 2. CHIQIM VA O'TKAZMANI TAHRIRLASH
-      else {
-          for (var i = 0; i < values.length; i++) {
-              if (values[i][8] == data.rowId) {
-                  rowIndex = i + 1; 
+      // 2. CHIQIM TAHRIRLASH (Batch Update)
+      else if (data.type === 'Chiqim') {
+          for (var i = 0; i < idValues.length; i++) {
+              if (idValues[i][0] == data.rowId) {
+                  rowIndex = i + 2;
                   break;
               }
           }
 
           if (rowIndex > 0) {
-              if (data.type === 'Chiqim') {
-                  sheet.getRange(rowIndex, 1).setValue(data.date);
-                  sheet.getRange(rowIndex, 4).setValue(data.category);
-                  sheet.getRange(rowIndex, 5).setValue(data.payment);
-                  sheet.getRange(rowIndex, 7).setValue(data.amount); 
-                  sheet.getRange(rowIndex, 8).setValue(data.note);
-              } 
-              else if (data.type === 'Otkazma') {
-                  var mainAmount = parseFloat(data.amount);       
-                  var usdAmount = parseFloat(data.amountIn);      
-                  var source = data.transferFrom; 
-                  var dest = data.transferTo;     
-                  var finalChiqim = 0; var finalKirim = 0;
-
-                  if (source === 'Dollar') { finalChiqim = (usdAmount > 0) ? usdAmount : mainAmount; finalKirim = mainAmount; } 
-                  else if (dest === 'Dollar') { finalChiqim = mainAmount; finalKirim = (usdAmount > 0) ? usdAmount : mainAmount; } 
-                  else { finalChiqim = mainAmount; finalKirim = mainAmount; }
-                  
-                  sheet.getRange(rowIndex, 1).setValue(data.date);
-                  sheet.getRange(rowIndex, 5).setValue(source + " -> " + dest);
-                  sheet.getRange(rowIndex, 6).setValue(finalKirim);
-                  sheet.getRange(rowIndex, 7).setValue(finalChiqim);
-                  sheet.getRange(rowIndex, 8).setValue(data.note);
-                  sheet.getRange(rowIndex, 10).setValue(source);
-                  sheet.getRange(rowIndex, 11).setValue(dest);
+              // BATCH UPDATE: Bir marta ko'p ustunlarni yangilash
+              var updates = [
+                [data.date, '', '', data.category, data.payment, 0, data.amount, data.note]
+              ];
+              // 1, 2, 3-ustunlar (sana, firma, point - point tahrir qilinmaydi)
+              sheet.getRange(rowIndex, 1, 1, 1).setValue(data.date);
+              sheet.getRange(rowIndex, 4, 1, 5).setValues([[data.category, data.payment, 0, data.amount, data.note]]);
+          }
+      } 
+      
+      // 3. O'TKAZMA TAHRIRLASH (Batch Update)
+      else if (data.type === 'Otkazma') {
+          for (var i = 0; i < idValues.length; i++) {
+              if (idValues[i][0] == data.rowId) {
+                  rowIndex = i + 2;
+                  break;
               }
+          }
+
+          if (rowIndex > 0) {
+              var mainAmount = parseFloat(data.amount);       
+              var usdAmount = parseFloat(data.amountIn);      
+              var source = data.transferFrom; 
+              var dest = data.transferTo;     
+              var finalChiqim = 0; 
+              var finalKirim = 0;
+
+              if (source === 'Dollar') { 
+                finalChiqim = (usdAmount > 0) ? usdAmount : mainAmount; 
+                finalKirim = mainAmount; 
+              } 
+              else if (dest === 'Dollar') { 
+                finalChiqim = mainAmount; 
+                finalKirim = (usdAmount > 0) ? usdAmount : mainAmount; 
+              } 
+              else { 
+                finalChiqim = mainAmount; 
+                finalKirim = mainAmount; 
+              }
+              
+              // BATCH UPDATE: Ko'p ustunlarni bir marta
+              sheet.getRange(rowIndex, 1, 1, 1).setValue(data.date);
+              sheet.getRange(rowIndex, 5, 1, 4).setValues([[source + " -> " + dest, finalKirim, finalChiqim, data.note]]);
+              sheet.getRange(rowIndex, 10, 1, 2).setValues([[source, dest]]);
           }
       }
   }
