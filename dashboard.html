@@ -27,7 +27,7 @@
   <div class="dash-filter-bar d-flex flex-wrap gap-3 align-items-end">
     
     <div style="min-width: 200px;">
-      <label class="small text-muted fw-bold mb-1">Vaqt Oralig'i</label>
+      <label class="small fw-bold mb-1">Vaqt oralig'i</label>
       <select id="filter-period" class="form-select shadow-sm" onchange="applyDashFilters()">
         <option value="this_month" selected>Joriy Oy</option>
         <option value="last_month">O'tgan Oy</option>
@@ -39,17 +39,17 @@
 
     <div id="custom-date-box" class="d-none d-flex gap-2">
       <div>
-        <label class="small text-muted fw-bold mb-1">Dan</label>
+        <label class="small fw-bold mb-1">Dan</label>
         <input type="date" id="date-start" class="form-control shadow-sm" onchange="applyDashFilters()">
       </div>
       <div>
-        <label class="small text-muted fw-bold mb-1">Gacha</label>
+        <label class="small fw-bold mb-1">Gacha</label>
         <input type="date" id="date-end" class="form-control shadow-sm" onchange="applyDashFilters()">
       </div>
     </div>
 
     <div style="min-width: 200px;">
-      <label class="small text-muted fw-bold mb-1">Firma </label>
+      <label class="small fw-bold mb-1">Firma </label>
       <select id="filter-firm" class="form-select shadow-sm" onchange="applyDashFilters()">
         <option value="all" selected>Umumiy</option>
         <option value="Greenpen">Greenpen</option>
@@ -207,11 +207,20 @@
       <div class="col-12">
         <div class="chart-box">
           <div class="chart-title">
-            <span><i class='bx bx-stats text-primary me-2'></i> Savdo nuqtasi Dinamikasi (Kirim)</span>
-            <select id="chart-point-select" class="form-select form-select-sm border-primary text-primary fw-bold" style="width: 250px; cursor: pointer;" onchange="renderSpecificPointChart()">
-               <option>Yuklanmoqda...</option>
-            </select>
+            <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+              <span><i class='bx bx-stats text-primary me-2'></i> Savdo nuqtasi dinamikasi (Kirim)</span>
+              
+              <div class="text-center">
+                <span class="text-muted small fw-bold me-2">Tanlangan davr uchun jami:</span>
+                <span id="specific-point-total" class="text-primary fw-bold fs-6">0 so'm</span>
+              </div>
+              
+              <select id="chart-point-select" class="form-select form-select-sm border-primary text-primary fw-bold" style="width: 200px; cursor: pointer;" onchange="renderSpecificPointChart()">
+                 <option>Yuklanmoqda...</option>
+              </select>
+            </div>
           </div>
+
           <div style="height: 350px;">
             <canvas id="chartSpecific"></canvas>
           </div>
@@ -227,7 +236,7 @@
         <thead class="table-light sticky-top">
            <tr>
              <th>Sana</th>
-             <th>Firma / Nuqta</th>
+             <th>Savdo nuqtasi</th>
              <th>Kategoriya</th>
              <th>To'lov</th>
              <th>Kirim</th>
