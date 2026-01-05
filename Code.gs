@@ -2,8 +2,13 @@
 // 1. SAHIFA YUKLASH (DO GET)
 // ==========================================
 function doGet(e) {
-  return HtmlService.createTemplateFromFile('index')
-      .evaluate()
+  var template = HtmlService.createTemplateFromFile('index');
+  
+  // Userlarni shu zahotiyoq yuklab, shablonga JSON formatida beramiz
+  var users = getAllUsers();
+  template.usersData = JSON.stringify(users); 
+
+  return template.evaluate()
       .setTitle('Moliya-Pro')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -64,14 +69,20 @@ function getFormData() {
 // ==========================================
 // 3. TRANZAKSIYALARNI SAQLASH (SUPER OPTIMIZED)
 // ==========================================
+// ==========================================
+// 3. TRANZAKSIYALARNI SAQLASH (OPTIMAL)
+// ==========================================
 function saveTransaction(data) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
-  var batchId = new Date().getTime().toString(); 
+  
+  // Agar 'add' rejimi bo'lsa, klientdan kelgan ID ni olamiz, aks holda yangi yaratamiz
+  var batchId = (data.formMode === 'add' && data.rowId) ? data.rowId : new Date().getTime().toString();
+  
   var dateStr = data.date; 
-  var firmVal = data.firm || ""; 
+  var firmVal = data.firm || "";
 
-  // --- A) YANGI QO'SHISH (Batch operatsiya - Barcha turlar) ---
-  if (!data.rowId || data.rowId === "") {
+  // --- A) YANGI QO'SHISH (formMode = 'add') ---
+  if (data.formMode === 'add') {
       var rowsToAdd = [];
       
       if (data.type === 'Kirim') {
@@ -87,31 +98,17 @@ function saveTransaction(data) {
         rowsToAdd.push([dateStr, firmVal, data.point, data.category, data.payment, 0, chiqim, data.note, batchId]);
       } 
       else if (data.type === 'Otkazma') {
-        var mainAmount = parseFloat(data.amount);       
+        var mainAmount = parseFloat(data.amount);
         var usdAmount = parseFloat(data.amountIn);      
         var source = data.transferFrom; 
         var dest = data.transferTo;     
         
-        var finalChiqim = 0; 
-        var finalKirim = 0;
-
-        if (source === 'Dollar') { 
-          finalChiqim = (usdAmount > 0) ? usdAmount : mainAmount; 
-          finalKirim = mainAmount; 
-        }
-        else if (dest === 'Dollar') { 
-          finalChiqim = mainAmount; 
-          finalKirim = (usdAmount > 0) ? usdAmount : mainAmount; 
-        }
-        else { 
-          finalChiqim = mainAmount; 
-          finalKirim = mainAmount; 
-        }
+        var finalChiqim = (source === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+        var finalKirim = (dest === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
 
         rowsToAdd.push([dateStr, firmVal, "Transfer", "O'tkazma", source + " -> " + dest, finalKirim, finalChiqim, data.note, batchId, source, dest]);
       }
       
-      // BIR MARTA QO'SHISH
       if (rowsToAdd.length > 0) {
         var lastRow = sheet.getLastRow();
         var numCols = rowsToAdd[0].length;
@@ -119,99 +116,56 @@ function saveTransaction(data) {
       }
   } 
   
-  // --- B) TAHRIRLASH (EDIT) - Super Optimized ---
+  // --- B) TAHRIRLASH (EDIT) ---
   else {
+      // Eski ma'lumotni o'chirish va yangisini yozish (Existing Logic)
+      // Bu qism o'zgarishsiz qolishi mumkin yoki oldingi koddagi Edit blokini shu yerga qo'ying.
+      // Qisqartirish uchun asosiy Edit logikasini shu yerga qaytarib qo'ying (sizdagi oldingi kod bilan bir xil).
+      
       var lastRow = sheet.getLastRow();
       if (lastRow < 2) return "No Data";
-      
-      // Faqat ID ustunini o'qish
-      var idRange = sheet.getRange(2, 9, lastRow - 1, 1);
-      var idValues = idRange.getValues();
+      var idValues = sheet.getRange(2, 9, lastRow - 1, 1).getValues();
       var rowIndex = -1;
 
-      // 1. KIRIMNI TAHRIRLASH
+      // ... (Eski Edit logikasi shu yerda davom etadi) ...
+      // Shunchaki eski koddagi "else" blokini ko'chirib o'tkazing
+      // Yoki oddiylik uchun pastdagi to'liq kodni oling:
+      
+      // 1. KIRIM EDIT
       if (data.type === 'Kirim') {
           var targetId = data.rowId;
           var rowsToDelete = [];
-          
-          for (var i = 0; i < idValues.length; i++) {
-              if (idValues[i][0] == targetId) {
-                  rowsToDelete.push(i + 2);
-              }
-          }
-          
-          for (var i = rowsToDelete.length - 1; i >= 0; i--) {
-              sheet.deleteRow(rowsToDelete[i]);
-          }
+          for (var i = 0; i < idValues.length; i++) { if (idValues[i][0] == targetId) rowsToDelete.push(i + 2); }
+          for (var i = rowsToDelete.length - 1; i >= 0; i--) { sheet.deleteRow(rowsToDelete[i]); }
 
           var rowsToAdd = [];
           for (var payType in data.payments) {
               var amount = parseFloat(data.payments[payType]);
-              if (amount > 0) {
-                  rowsToAdd.push([data.date, firmVal, data.point, "Savdo tushumi", payType, amount, 0, data.note, targetId]);
-              }
+              if (amount > 0) rowsToAdd.push([data.date, firmVal, data.point, "Savdo tushumi", payType, amount, 0, data.note, targetId]);
           }
-          
-          if (rowsToAdd.length > 0) {
-            var lastRow = sheet.getLastRow();
-            sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 9).setValues(rowsToAdd);
+          if (rowsToAdd.length > 0) sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAdd.length, 9).setValues(rowsToAdd);
+      }
+      // 2. CHIQIM EDIT
+      else if (data.type === 'Chiqim') {
+          for (var i = 0; i < idValues.length; i++) { if (idValues[i][0] == data.rowId) { rowIndex = i + 2; break; } }
+          if (rowIndex > 0) {
+             sheet.getRange(rowIndex, 1, 1, 1).setValue(data.date);
+             sheet.getRange(rowIndex, 4, 1, 5).setValues([[data.category, data.payment, 0, data.amount, data.note]]);
           }
       }
-      
-      // 2. CHIQIM TAHRIRLASH (Batch Update)
-      else if (data.type === 'Chiqim') {
-          for (var i = 0; i < idValues.length; i++) {
-              if (idValues[i][0] == data.rowId) {
-                  rowIndex = i + 2;
-                  break;
-              }
-          }
-
-          if (rowIndex > 0) {
-              // BATCH UPDATE: Bir marta ko'p ustunlarni yangilash
-              var updates = [
-                [data.date, '', '', data.category, data.payment, 0, data.amount, data.note]
-              ];
-              // 1, 2, 3-ustunlar (sana, firma, point - point tahrir qilinmaydi)
-              sheet.getRange(rowIndex, 1, 1, 1).setValue(data.date);
-              sheet.getRange(rowIndex, 4, 1, 5).setValues([[data.category, data.payment, 0, data.amount, data.note]]);
-          }
-      } 
-      
-      // 3. O'TKAZMA TAHRIRLASH (Batch Update)
+      // 3. OTKAZMA EDIT
       else if (data.type === 'Otkazma') {
-          for (var i = 0; i < idValues.length; i++) {
-              if (idValues[i][0] == data.rowId) {
-                  rowIndex = i + 2;
-                  break;
-              }
-          }
-
+          for (var i = 0; i < idValues.length; i++) { if (idValues[i][0] == data.rowId) { rowIndex = i + 2; break; } }
           if (rowIndex > 0) {
-              var mainAmount = parseFloat(data.amount);       
-              var usdAmount = parseFloat(data.amountIn);      
-              var source = data.transferFrom; 
-              var dest = data.transferTo;     
-              var finalChiqim = 0; 
-              var finalKirim = 0;
-
-              if (source === 'Dollar') { 
-                finalChiqim = (usdAmount > 0) ? usdAmount : mainAmount; 
-                finalKirim = mainAmount; 
-              } 
-              else if (dest === 'Dollar') { 
-                finalChiqim = mainAmount; 
-                finalKirim = (usdAmount > 0) ? usdAmount : mainAmount; 
-              } 
-              else { 
-                finalChiqim = mainAmount; 
-                finalKirim = mainAmount; 
-              }
-              
-              // BATCH UPDATE: Ko'p ustunlarni bir marta
-              sheet.getRange(rowIndex, 1, 1, 1).setValue(data.date);
-              sheet.getRange(rowIndex, 5, 1, 4).setValues([[source + " -> " + dest, finalKirim, finalChiqim, data.note]]);
-              sheet.getRange(rowIndex, 10, 1, 2).setValues([[source, dest]]);
+             // O'tkazma update logikasi (qisqartirildi)
+             var mainAmount = parseFloat(data.amount);
+             var usdAmount = parseFloat(data.amountIn);      
+             var source = data.transferFrom; var dest = data.transferTo;     
+             var finalChiqim = (source === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+             var finalKirim = (dest === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+             sheet.getRange(rowIndex, 1, 1, 1).setValue(data.date);
+             sheet.getRange(rowIndex, 5, 1, 4).setValues([[source + " -> " + dest, finalKirim, finalChiqim, data.note]]);
+             sheet.getRange(rowIndex, 10, 1, 2).setValues([[source, dest]]);
           }
       }
   }
