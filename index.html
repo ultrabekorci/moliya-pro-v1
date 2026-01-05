@@ -13,28 +13,22 @@
     <?!= include('css'); ?>
 
     <style>
-        /* --- ASOSIY RANG SOZLAMALARI --- */
         :root {
-            --body-bg: #f4f7fe;       /* Light mode foni */
-            --nav-bg: #ffffff;        /* Light mode navbar */
-            --text-main: #1e293b;     /* Asosiy matn rangi (qora) */
+            --body-bg: #f4f7fe;
+            --nav-bg: #ffffff;
+            --text-main: #1e293b;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
             --input-bg: #f8fafc;
             --shadow-color: rgba(0, 0, 0, 0.05);
-            
-            /* Dark Mode Tugmasi */
             --toggle-icon-color: #0A2558; 
             --toggle-bg: #e2e8f0;
-            
-            /* About Hero foni */
             --hero-bg: #ffffff; 
         }
 
-        /* --- DARK MODE GLOBAL SOZLAMALARI --- */
         body.dark-mode {
-            --body-bg: #0f172a;        /* Qop-qora fon */
-            --nav-bg: #1e293b;         /* To'q ko'k navbar */
+            --body-bg: #0f172a;
+            --nav-bg: #1e293b;
             --hero-bg: #1e293b; 
             --toggle-icon-color: #ffd700;
             --toggle-bg: rgba(255, 255, 255, 0.1);
@@ -46,26 +40,19 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* ==========================================================
-           1. SARLAVHALAR VA FON USTIDAGI YOZUVLAR
-        ========================================================== */
-        
-        /* Dark Mode yoqilganda umumiy Body yozuvlari OQ bo'lsin */
         body.dark-mode {
             color: #ffffff !important;
         }
 
-        /* Navbar sarlavhasi (Dashboard/Kirim-Chiqim) Dark Modeda OQ bo'lsin */
         body.dark-mode .sidebar-button .dashboard {
             color: #ffffff !important;
         }
         .sidebar-button .dashboard { 
             font-size: 24px; font-weight: 600; 
-            color: var(--text-main); /* Default (Light) da qora */
+            color: var(--text-main);
             transition: color 0.3s;
         }
 
-        /* "Joriy Oy Statistikasi" kabi kartadan tashqaridagi sarlavhalar majburan OQ bo'ladi */
         body.dark-mode .home-content h1, 
         body.dark-mode .home-content h2, 
         body.dark-mode .home-content h3, 
@@ -74,27 +61,20 @@
             color: #ffffff !important;
         }
 
-        /* ==========================================================
-           2. OQ KARTALAR ICHIDAGI YOZUVLAR (QORA QOLADI)
-        ========================================================== */
-        /* Dark Mode bo'lsa ham, OQ kartalar ichi QORA yozuvda qolishi SHART */
-        
         body.dark-mode .card, 
         body.dark-mode .bg-white,
         body.dark-mode .table {
-            background-color: #ffffff !important; /* Fon oq */
-            color: #1e293b !important;            /* Yozuv qora */
+            background-color: #ffffff !important;
+            color: #1e293b !important;
             border-color: #e2e8f0 !important;
         }
 
-        /* Kartalar ichidagi barcha sarlavha va yozuvlarni majburan QORA qilish */
         body.dark-mode .card h1, body.dark-mode .card h2, body.dark-mode .card h3,
         body.dark-mode .card h4, body.dark-mode .card h5, body.dark-mode .card p,
         body.dark-mode .card span, body.dark-mode .card div, body.dark-mode .card i {
             color: #1e293b !important;
         }
         
-        /* Jadval sarlavhalari dark modeda */
         body.dark-mode .table thead th {
             background-color: #f8fafc !important;
             color: #1e293b !important;
@@ -103,9 +83,6 @@
             background-color: rgba(0,0,0,0.05) !important;
         }
 
-        /* ==========================================================
-           3. PROFIL MENYUSI (To'liq Dark Mode)
-        ========================================================== */
         body.dark-mode .profile-dropdown-content {
             background-color: #1e293b !important; 
             border-color: #334155 !important;
@@ -131,32 +108,21 @@
             color: #fff !important; 
         }
 
-        /* ==========================================================
-           4. ABOUT SAHIFASI TUZATISHLARI (GitHub Fix)
-        ========================================================== */
-        /* Sarlavhalar dark modeda oq bo'lsin */
         body.dark-mode .bento-pro h4 { color: #ffffff !important; }
         
-        /* Oddiy matnlar ochroq rangda */
         body.dark-mode .bento-pro .text-muted {
             color: #cbd5e1 !important; 
         }
         
-        /* Ijtimoiy tarmoq tugmalari logikasi: */
         body.dark-mode .social-btn {
-            background-color: #f8fafc !important; /* Tugma oq/och */
+            background-color: #f8fafc !important;
             border-color: #334155 !important;
         }
 
-        /* GitHub iconi uchun maxsus: Dark modeda QORA bo'lsin */
         body.dark-mode .social-btn i.bxl-github {
             color: #1e293b !important;
         }
 
-
-        /* =========================================
-           5. UMUMIY STYLES
-        ======================================== */
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
             background: radial-gradient(circle at center, #1e3c72 0%, #2a5298 0%, #0A2558 80%);
@@ -196,7 +162,6 @@
         .btn-login:hover { background: #0d3480 !important; }
         .login-footer { color: #6c757d !important; }
 
-        /* Navigatsiya */
         nav {
             position: sticky; top: 0; z-index: 1000; background: var(--nav-bg); padding: 0 20px; height: 80px; 
             display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px var(--shadow-color);
@@ -218,7 +183,6 @@
         .sidebar { background: #0A2558 !important; }
         .home-section { background: var(--body-bg); transition: background 0.3s; }
 
-        /* About Styles */
         .about-pro { max-width: 1100px; margin: 0 auto; }
         .hero-card {
             background: var(--hero-bg); border-radius: 30px; padding: 80px 40px; text-align: center;
@@ -423,17 +387,14 @@
         </div>
     </section>
 </div>
-
+<script>
+  var PRELOADED_USERS = <?!= usersData ?>; 
+</script>
 <?!= include('js'); ?>
 <script>
-// ==========================================
-// SESSION MANAGEMENT (15 DAQIQA)
-// ==========================================
-
-const SESSION_TIMEOUT = 15 * 60 * 1000; // 15 daqiqa (millisekundlarda)
+const SESSION_TIMEOUT = 15 * 60 * 1000;
 let sessionTimer;
 
-// Session ni tekshirish va boshlash
 function initSession() {
     const savedUser = sessionStorage.getItem('moliya_user');
     const savedRole = sessionStorage.getItem('moliya_role');
@@ -442,7 +403,6 @@ function initSession() {
     if (savedUser && savedRole && lastActivity) {
         const timePassed = Date.now() - parseInt(lastActivity);
         
-        // Agar 15 daqiqadan kam o'tgan bo'lsa, avtomatik login
         if (timePassed < SESSION_TIMEOUT) {
             USER_ROLE = savedRole;
             if(document.getElementById('user-display')) {
@@ -458,44 +418,36 @@ function initSession() {
             refreshList();
             loadBalances();
             
-            // Session timerini ishga tushirish
             startSessionTimer();
             return true;
         } else {
-            // Vaqt o'tib ketgan - session tozalash
             clearSession();
         }
     }
     return false;
 }
 
-// Session timerni boshlash
 function startSessionTimer() {
-    // Avvalgi timerni to'xtatish
     if (sessionTimer) clearTimeout(sessionTimer);
-    
-    // Oxirgi harakatni yangilash
     updateLastActivity();
-    
-    // 15 daqiqa kutish
     sessionTimer = setTimeout(function() {
         Swal.fire({
             icon: 'warning',
-            title: 'Sessiya tugadi!',
+            iconColor: '#d33',
+            title: 'Sessiya vaqti tugadi!',
             text: '15 daqiqa harakatsizlik. Iltimos, tizimga qaytadan kiring!',
-            confirmButtonText: 'OK'
+            confirmButtonText: 'OK' ,
+            confirmButtonColor: '#d33'
         }).then(() => {
             logoutSystem();
         });
     }, SESSION_TIMEOUT);
 }
 
-// Oxirgi harakatni yangilash
 function updateLastActivity() {
     sessionStorage.setItem('moliya_last_activity', Date.now().toString());
 }
 
-// Session ni tozalash
 function clearSession() {
     sessionStorage.removeItem('moliya_user');
     sessionStorage.removeItem('moliya_role');
@@ -503,14 +455,10 @@ function clearSession() {
     if (sessionTimer) clearTimeout(sessionTimer);
 }
 
-// Har qanday harakatda timerni qayta boshlash
 function resetSessionTimer() {
     startSessionTimer();
 }
 
-// ==========================================
-// LOGIN TIZIMINI YANGILASH
-// ==========================================
 function loginSystem(e) {
     if(e) e.preventDefault();
     
@@ -523,7 +471,6 @@ function loginSystem(e) {
     if (foundUser) {
         USER_ROLE = foundUser.r;
         
-        // SESSION-ga saqlash
         sessionStorage.setItem('moliya_user', u);
         sessionStorage.setItem('moliya_role', foundUser.r);
         sessionStorage.setItem('moliya_last_activity', Date.now().toString());
@@ -541,37 +488,27 @@ function loginSystem(e) {
         refreshList();
         loadBalances();
         
-        // Session timerni boshlash
         startSessionTimer();
     } else {
         err.innerText = "Login yoki parol noto'g'ri!";
     }
 }
 
-// ==========================================
-// LOGOUT TIZIMINI YANGILASH
-// ==========================================
 function logoutSystem() {
     USER_ROLE = "";
     ALL_DATA = [];
     DASH_DATA = [];
     
-    // Session ni tozalash
     clearSession();
     
     document.getElementById('main-app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
 }
 
-// ==========================================
-// SAHIFA YUKLANGANDA SESSION TEKSHIRISH
-// ==========================================
 window.addEventListener('load', function() {
-    // Avval session tekshirish
     const sessionActive = initSession();
     
     if (!sessionActive) {
-        // Session yo'q bo'lsa, odatdagi yuklash
         google.script.run.withSuccessHandler(function(users) { 
             LOCAL_USERS_DB = users; 
         }).getAllUsers();
@@ -592,91 +529,77 @@ window.addEventListener('load', function() {
     if(modalEl) document.body.appendChild(modalEl);
 });
 
-// ==========================================
-// HAR QANDAY HARAKATDA TIMERNI QAYTA BOSHLASH
-// ==========================================
-// Mouse harakati
 document.addEventListener('mousemove', resetSessionTimer);
-// Keyboard bosilishi
 document.addEventListener('keypress', resetSessionTimer);
-// Click bosilishi
 document.addEventListener('click', resetSessionTimer);
-// Scroll qilish
 document.addEventListener('scroll', resetSessionTimer);
-// Touch (mobil qurilmalar uchun)
 document.addEventListener('touchstart', resetSessionTimer);
-</script>
-<script>
-    function togglePasswordVisibility() {
-        const input = document.getElementById("loginPass");
-        const icon = document.getElementById("toggleBtn");
-        if (input.type === "password") {
-            input.type = "text"; icon.classList.replace("bx-hide", "bx-show");
-        } else {
-            input.type = "password"; icon.classList.replace("bx-show", "bx-hide");
-        }
+
+function togglePasswordVisibility() {
+    const input = document.getElementById("loginPass");
+    const icon = document.getElementById("toggleBtn");
+    if (input.type === "password") {
+        input.type = "text"; icon.classList.replace("bx-hide", "bx-show");
+    } else {
+        input.type = "password"; icon.classList.replace("bx-show", "bx-hide");
     }
+}
 
-    const themeButton = document.getElementById('theme-button');
-    const darkTheme = 'dark-mode';
-    const iconMoon = 'bx-moon'; 
-    const iconSun = 'bx-sun';    
+const themeButton = document.getElementById('theme-button');
+const darkTheme = 'dark-mode';
+const iconMoon = 'bx-moon'; 
+const iconSun = 'bx-sun';    
 
-    const selectedTheme = localStorage.getItem('selected-theme');
-    const getCurrentTheme = () => document.body.classList.contains(darkTheme) ? 'dark' : 'light';
-    const getCurrentIcon = () => themeButton.classList.contains(iconSun) ? 'bx-sun' : 'bx-moon';
+const selectedTheme = localStorage.getItem('selected-theme');
+const getCurrentTheme = () => document.body.classList.contains(darkTheme) ? 'dark' : 'light';
+const getCurrentIcon = () => themeButton.classList.contains(iconSun) ? 'bx-sun' : 'bx-moon';
 
-    if (selectedTheme === 'dark') {
-        document.body.classList.add(darkTheme);
+if (selectedTheme === 'dark') {
+    document.body.classList.add(darkTheme);
+    themeButton.classList.remove(iconMoon);
+    themeButton.classList.add(iconSun);
+} else {
+    document.body.classList.remove(darkTheme);
+    themeButton.classList.remove(iconSun);
+    themeButton.classList.add(iconMoon);
+}
+
+function toggleTheme() {
+    document.body.classList.toggle(darkTheme);
+    
+    if (document.body.classList.contains(darkTheme)) {
         themeButton.classList.remove(iconMoon);
         themeButton.classList.add(iconSun);
     } else {
-        document.body.classList.remove(darkTheme);
         themeButton.classList.remove(iconSun);
         themeButton.classList.add(iconMoon);
     }
-
-    function toggleTheme() {
-        document.body.classList.toggle(darkTheme);
-        
-        if (document.body.classList.contains(darkTheme)) {
-            themeButton.classList.remove(iconMoon);
-            themeButton.classList.add(iconSun);
-        } else {
-            themeButton.classList.remove(iconSun);
-            themeButton.classList.add(iconMoon);
-        }
-        localStorage.setItem('selected-theme', getCurrentTheme());
-        localStorage.setItem('selected-icon', getCurrentIcon());
-        
-        // Dashboardda bo'lsa, chartlarni qayta render qilish
-        if(document.getElementById('view-dashboard').style.display !== 'none') {
-            setTimeout(function() {
-                applyDashFilters();
-            }, 100);
-        }
+    localStorage.setItem('selected-theme', getCurrentTheme());
+    localStorage.setItem('selected-icon', getCurrentIcon());
+    
+    if(document.getElementById('view-dashboard').style.display !== 'none') {
+        setTimeout(function() {
+            applyDashFilters();
+        }, 100);
     }
-    // ... (eski kodlar: togglePasswordVisibility, toggleTheme va boshqalar turibdi) ...
+}
 
-    // --- MANA BU KODNI QO'SHING ---
-    function toggleProfileMenu() {
-        var menu = document.getElementById("profileDropdown");
-        menu.classList.toggle("show-menu");
-    }
+function toggleProfileMenu() {
+    var menu = document.getElementById("profileDropdown");
+    menu.classList.toggle("show-menu");
+}
 
-    // Menyu ochilgandan keyin, chetga bosilsa yopish funksiyasi
-    window.onclick = function(event) {
-        if (!event.target.closest('.profile-trigger')) {
-            var dropdowns = document.getElementsByClassName("profile-dropdown-content");
-            for (var i = 0; i < dropdowns.length; i++) {
-                var openDropdown = dropdowns[i];
-                if (openDropdown.classList.contains('show-menu')) {
-                    openDropdown.classList.remove('show-menu');
-                }
+window.onclick = function(event) {
+    if (!event.target.closest('.profile-trigger')) {
+        var dropdowns = document.getElementsByClassName("profile-dropdown-content");
+        for (var i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('show-menu')) {
+                openDropdown.classList.remove('show-menu');
             }
         }
     }
-</script>
+}
 </script>
 </body>
 </html>
