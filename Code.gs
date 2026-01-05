@@ -1,13 +1,7 @@
-// ==========================================
-// 1. SAHIFA YUKLASH (DO GET)
-// ==========================================
 function doGet(e) {
   var template = HtmlService.createTemplateFromFile('index');
-  
-  // Userlarni shu zahotiyoq yuklab, shablonga JSON formatida beramiz
   var users = getAllUsers();
   template.usersData = JSON.stringify(users); 
-
   return template.evaluate()
       .setTitle('Moliya-Pro')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -18,15 +12,11 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-// ==========================================
-// 2. USERLAR VA SOZLAMALARNI OLISH
-// ==========================================
 function getAllUsers() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var users = [];
-  // 1-qator sarlavha deb tashlab ketamiz
   for (var i = 1; i < data.length; i++) {
     users.push({ u: data[i][0], p: data[i][1], r: data[i][2] });
   }
@@ -38,24 +28,17 @@ function getFormData() {
   if (!sheet) return null;
   var data = sheet.getDataRange().getValues();
   
-  var points = [];   // Savdo nuqtalari (B ustun)
-  var cats = [];     // Kategoriyalar (D ustun)
-  var payments = []; // To'lov turlari (C ustun)
+  var points = [];
+  var cats = [];
+  var payments = [];
 
-  // 1-qator sarlavha deb tashlab ketamiz
   for (var i = 1; i < data.length; i++) {
-    
-    // B ustun (index 1) -> Savdo Nuqtalari
     if (data[i][1] && data[i][1] !== "") {
        points.push(data[i][1]);
     }
-
-    // C ustun (index 2) -> To'lov Turlari
     if (data[i][2] && data[i][2] !== "") {
        payments.push(data[i][2]);
     }
-
-    // D ustun (index 3) -> Kategoriyalar
     if (data[i][3] && data[i][3] !== "") {
        cats.push(data[i][3]);
     }
@@ -63,25 +46,13 @@ function getFormData() {
   
   return { points: points, cats: cats, payments: payments };
 }
-// ==========================================
-// 3. TRANZAKSIYALARNI SAQLASH
-// ==========================================
-// ==========================================
-// 3. TRANZAKSIYALARNI SAQLASH (SUPER OPTIMIZED)
-// ==========================================
-// ==========================================
-// 3. TRANZAKSIYALARNI SAQLASH (OPTIMAL)
-// ==========================================
+
 function saveTransaction(data) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
-  
-  // Agar 'add' rejimi bo'lsa, klientdan kelgan ID ni olamiz, aks holda yangi yaratamiz
   var batchId = (data.formMode === 'add' && data.rowId) ? data.rowId : new Date().getTime().toString();
-  
   var dateStr = data.date; 
   var firmVal = data.firm || "";
 
-  // --- A) YANGI QO'SHISH (formMode = 'add') ---
   if (data.formMode === 'add') {
       var rowsToAdd = [];
       
@@ -115,23 +86,12 @@ function saveTransaction(data) {
         sheet.getRange(lastRow + 1, 1, rowsToAdd.length, numCols).setValues(rowsToAdd);
       }
   } 
-  
-  // --- B) TAHRIRLASH (EDIT) ---
   else {
-      // Eski ma'lumotni o'chirish va yangisini yozish (Existing Logic)
-      // Bu qism o'zgarishsiz qolishi mumkin yoki oldingi koddagi Edit blokini shu yerga qo'ying.
-      // Qisqartirish uchun asosiy Edit logikasini shu yerga qaytarib qo'ying (sizdagi oldingi kod bilan bir xil).
-      
       var lastRow = sheet.getLastRow();
       if (lastRow < 2) return "No Data";
       var idValues = sheet.getRange(2, 9, lastRow - 1, 1).getValues();
       var rowIndex = -1;
 
-      // ... (Eski Edit logikasi shu yerda davom etadi) ...
-      // Shunchaki eski koddagi "else" blokini ko'chirib o'tkazing
-      // Yoki oddiylik uchun pastdagi to'liq kodni oling:
-      
-      // 1. KIRIM EDIT
       if (data.type === 'Kirim') {
           var targetId = data.rowId;
           var rowsToDelete = [];
@@ -145,7 +105,6 @@ function saveTransaction(data) {
           }
           if (rowsToAdd.length > 0) sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAdd.length, 9).setValues(rowsToAdd);
       }
-      // 2. CHIQIM EDIT
       else if (data.type === 'Chiqim') {
           for (var i = 0; i < idValues.length; i++) { if (idValues[i][0] == data.rowId) { rowIndex = i + 2; break; } }
           if (rowIndex > 0) {
@@ -153,11 +112,9 @@ function saveTransaction(data) {
              sheet.getRange(rowIndex, 4, 1, 5).setValues([[data.category, data.payment, 0, data.amount, data.note]]);
           }
       }
-      // 3. OTKAZMA EDIT
       else if (data.type === 'Otkazma') {
           for (var i = 0; i < idValues.length; i++) { if (idValues[i][0] == data.rowId) { rowIndex = i + 2; break; } }
           if (rowIndex > 0) {
-             // O'tkazma update logikasi (qisqartirildi)
              var mainAmount = parseFloat(data.amount);
              var usdAmount = parseFloat(data.amountIn);      
              var source = data.transferFrom; var dest = data.transferTo;     
@@ -174,43 +131,32 @@ function saveTransaction(data) {
   return "Success";
 }
 
-// ==========================================
-// 4. O'CHIRISH
-// ==========================================
 function deleteTransaction(rowId) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
   var data = sheet.getDataRange().getValues();
-  for (var i = 0; i < data.length; i++) {
-    // ID 8-indexda
+  var deletedCount = 0;
+
+  for (var i = data.length - 1; i >= 0; i--) {
     if (data[i][8] == rowId) {
       sheet.deleteRow(i + 1);
-      return "Deleted";
+      deletedCount++;
     }
   }
-  return "Not Found";
+  
+  return deletedCount > 0 ? "Deleted" : "Not Found";
 }
 
-// ==========================================
-// 5. JADVAL UCHUN MA'LUMOT
-// ==========================================
-// ==========================================
-// 5. JADVAL UCHUN MA'LUMOT (TUZATILDI)
-// ==========================================
 function getTransactionsList() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
   if (!sheet) return [];
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   
-  // Ma'lumotlarni olamiz
   var data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
   
   var result = [];
   for (var i = data.length - 1; i >= 0; i--) {
     var row = data[i];
-    
-    // --- SANANI FORMATLASH (MUHIM) ---
-    // Agar sana "Date" obyekti bo'lsa, uni chiroyli stringga aylantiramiz
     var dateVal = row[0];
     var dateStr = "";
     
@@ -218,16 +164,16 @@ function getTransactionsList() {
         var y = dateVal.getFullYear();
         var m = ("0" + (dateVal.getMonth() + 1)).slice(-2);
         var d = ("0" + dateVal.getDate()).slice(-2);
-        dateStr = y + "-" + m + "-" + d; // 2025-12-31 formatida
+        dateStr = y + "-" + m + "-" + d;
     } else {
-        dateStr = String(dateVal); // Shunchaki tekst bo'lsa
+        dateStr = String(dateVal);
     }
 
     result.push({
-      date: dateStr,      // Formatlangan sana
+      date: dateStr,
       firm: row[1],
       point: row[2],
-      cat: row[3],        // Kategoriya
+      cat: row[3],
       pay: row[4],
       kirim: row[5],
       chiqim: row[6],
@@ -238,9 +184,6 @@ function getTransactionsList() {
   return result;
 }
 
-// ==========================================
-// 6. DASHBOARD METRIKALARI (FILTR BILAN)
-// ==========================================
 function getDashboardMetrics() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
   if (!sheet) return null;
@@ -263,8 +206,6 @@ function getDashboardMetrics() {
     pointsData: {} 
   };
 
-  // --- BLACKLIST (KIRITILMAYDIGANLAR) ---
-  // Bu nomdagi "Savdo nuqtalari" statistikaga kirmaydi
   var blacklist = ["DONIYOR AKA", "BOSHQA", "DIREKTOR", "KASSA"];
 
   data.forEach(function(row) {
@@ -277,14 +218,9 @@ function getDashboardMetrics() {
     if (dateVal.getFullYear() === currentYear) {
        var m = dateVal.getMonth();
        
-       // --- FILTR ---
-       // 1. Kirim: Faqat "Savdo tushumi" bo'lsa VA Blacklistda bo'lmasa
        var isValidIncome = (kirim > 0 && category === "Savdo tushumi" && blacklist.indexOf(point.toUpperCase()) === -1);
-       
-       // 2. Chiqim: O'tkazma emasligi
        var isValidExpense = (chiqim > 0 && category !== "O'tkazma" && category !== "Transfer");
 
-       // KIRIM HISOBLASH
        if (isValidIncome) {
            stats.yearIncome[m] += kirim;
            if (m === currentMonth) stats.monthIncome += kirim;
@@ -293,7 +229,6 @@ function getDashboardMetrics() {
            stats.pointsData[point] += kirim;
        }
 
-       // CHIQIM HISOBLASH
        if (isValidExpense) {
            stats.yearExpense[m] += chiqim;
            if (m === currentMonth) stats.monthExpense += chiqim;
@@ -305,9 +240,6 @@ function getDashboardMetrics() {
   return stats;
 }
 
-// ==========================================
-// 7. REAL VAQT BALANSI (KASSA)
-// ==========================================
 function getRealTimeBalance() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
   if (!sheet) return { Naqd: 0, P2P: 0, Dollar: 0 };
@@ -325,12 +257,10 @@ function getRealTimeBalance() {
     var kirim = parseFloat(row[5]) || 0; 
     var chiqim = parseFloat(row[6]) || 0;
     
-    // O'TKAZMA
     if (category === "O'tkazma" || category === "Transfer") {
        var source = row[9]; 
        var dest = row[10];
        
-       // Eski ma'lumotlar uchun (agar col 10-11 bo'sh bo'lsa)
        if (!source && payType.includes('->')) {
            var parts = payType.split('->');
            source = parts[0].trim();
@@ -340,7 +270,6 @@ function getRealTimeBalance() {
        if (balance.hasOwnProperty(source)) balance[source] -= chiqim; 
        if (balance.hasOwnProperty(dest)) balance[dest] += kirim;
     } 
-    // ODDIY KIRIM / CHIQIM
     else {
        if (balance.hasOwnProperty(payType)) {
           balance[payType] += (kirim - chiqim);
