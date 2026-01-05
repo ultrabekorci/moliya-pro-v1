@@ -3,9 +3,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-  // ==========================================
-  // 1. GLOBAL O'ZGARUVCHILAR
-  // ==========================================
   var ALL_DATA = [];      
   var DASH_DATA = [];     
   var CACHED_FILTERED = []; 
@@ -14,32 +11,36 @@
   var CURRENT_TYPE = 'Kirim';
   var transModal;
   var USER_ROLE = "";
-  var LOCAL_USERS_DB = [];
+  var LOCAL_USERS_DB = (typeof PRELOADED_USERS !== 'undefined') ? PRELOADED_USERS : [];
   
   const LIMIT_SUMMA = 999999999;
   const LIMIT_IZOH = 150;
   const LIMIT_NUQTA = 30;
 
-  // ==========================================
-  // 2. INIT
-  // ==========================================
- 
-
-  // ==========================================
-  // 3. NAVIGATSIYA
-  // ==========================================
   function switchTab(tabName, element) {
     if(tabName === 'dashboard' && USER_ROLE.toLowerCase() !== 'admin') { 
         Swal.fire('Ruxsat yo\'q', 'Siz dashboardni ko\'ra olmaysiz!', 'error'); return; 
     }
+    
     document.getElementById('view-dashboard').style.display = 'none';
     document.getElementById('view-list').style.display = 'none';
     document.getElementById('view-about').style.display = 'none';
-    
     document.getElementById('view-' + tabName).style.display = 'block';
     
-    if(tabName === 'dashboard') setTimeout(loadDashboard, 100);
-    if(tabName === 'list') { refreshList(); loadBalances(); }
+    if(tabName === 'dashboard') {
+        setTimeout(loadDashboard, 100);
+    }
+    
+    if(tabName === 'list') { 
+        if (ALL_DATA.length > 0) {
+            renderCurrentView(); 
+            calculateLocalBalance();
+            refreshList(true);
+        } else {
+            refreshList(false);  
+        }
+        loadBalances();
+    }
     
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     if(element) element.classList.add('active');
@@ -64,9 +65,47 @@
       if(list && Array.isArray(list)) list.forEach(i => { let o = document.createElement('option'); o.value = i; o.text = i; s.add(o); });
   }
 
-  // ==========================================
-  // 4. DASHBOARD LOGIKASI
-  // ==========================================
+  function calculateLocalBalance() {
+      let bal = { "Naqd": 0, "P2P": 0, "Dollar": 0, "Bank": 0 };
+
+      ALL_DATA.forEach(item => {
+          let k = parseMoney(item.kirim);
+          let c = parseMoney(item.chiqim);
+          let cat = item.cat;
+          let pay = item.pay;
+
+          if (cat === "Transfer" || cat === "O'tkazma") {
+              if (pay && pay.includes('->')) {
+                  let parts = pay.split('->');
+                  let source = parts[0].trim();
+                  let dest = parts[1].trim();
+                  
+                  if (bal.hasOwnProperty(source)) bal[source] -= c;
+                  if (bal.hasOwnProperty(dest)) bal[dest] += k;
+              }
+          } 
+          else {
+              if (bal.hasOwnProperty(pay)) {
+                  bal[pay] += (k - c);
+              }
+          }
+      });
+
+      if(document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm";
+      if(document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm";
+      if(document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar);
+  }
+
+  function loadBalances() { 
+      google.script.run.withSuccessHandler(function(bal) { 
+          if(bal) { 
+              if(document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm"; 
+              if(document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm"; 
+              if(document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar); 
+          } 
+      }).getRealTimeBalance(); 
+  }
+
   function loadDashboard() {
     const periodSel = document.getElementById('filter-period');
     if(periodSel) toggleCustomDate(periodSel.value);
@@ -123,7 +162,7 @@
       data.forEach(item => {
           let inc = parseMoney(item.kirim);
           if(item.point && inc > 0) {
-             let pName = item.point.toUpperCase().trim();
+             let pName = (item.point || "").toUpperCase().trim();
              if(IGNORED.some(bad => pName.includes(bad))) return;
              
              let isSmart = pName.includes('SMARTMIZ');
@@ -151,7 +190,13 @@
       if(!select || !ctx) return;
 
       const selectedPoint = select.value;
-      if(!selectedPoint || selectedPoint === "Ma'lumot yo'q") { destroyChart('specific'); return; }
+
+      if(!selectedPoint || selectedPoint === "Ma'lumot yo'q") { 
+          destroyChart('specific'); 
+          const totalDisplay = document.getElementById('specific-point-total');
+          if(totalDisplay) totalDisplay.innerText = "0 so'm";
+          return; 
+      }
 
       const periodEl = document.getElementById('filter-period');
       let dates = getStartEndDates(periodEl.value);
@@ -162,12 +207,12 @@
       }
 
       let trendData = {};
-      let totalSum = 0; // JAMI SUMMA
+      let totalSum = 0; 
       CACHED_FILTERED.forEach(item => {
           if(item.point === selectedPoint) {
               let inc = parseMoney(item.kirim);
               if(inc > 0) {
-                  totalSum += inc; // SUMMAGA QO'SHISH
+                  totalSum += inc; 
                   let key = item.date; 
                   if(isMonthly) key = item.date.substring(0, 7); 
                   if(!trendData[key]) trendData[key] = 0;
@@ -176,7 +221,6 @@
           }
       });
 
-      // JAMI SUMMANI KO'RSATISH
       const totalDisplay = document.getElementById('specific-point-total');
       if(totalDisplay) {
           totalDisplay.innerText = fmt(totalSum) + " so'm";
@@ -185,7 +229,6 @@
       let labels = Object.keys(trendData).sort();
       let dataValues = labels.map(l => trendData[l]);
 
-      // --- DARK MODE RANG ---
       const isDarkMode = document.body.classList.contains('dark-mode');
       const chartTextColor = isDarkMode ? '#ffffff' : '#666666';
       const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
@@ -226,7 +269,6 @@
       });
   }
 
-  // --- HISOB-KITOB LOGIKASI ---
   function calculateStats(data, selectedFirm, isMonthlyMode) {
     let totalIncome = 0; let totalExpense = 0; let cashIncome = 0;
     let incomeByFirm = { "Greenpen": 0, "Smartmiz": 0 };
@@ -235,14 +277,11 @@
     const IGNORED_POINTS = ["DONIYOR AKA", "BOSHQA", "DIREKTOR", "KASSA"];
     const IGNORED_CATS = ["O'tkazma", "Transfer"]; 
 
-    // 1. Daromad va Firmalar bo'yicha hisob
     data.forEach(item => {
         let inc = parseMoney(item.kirim);
         let p = (item.point||"").toUpperCase().trim();
         let c = (item.cat||"");
-        
         if (IGNORED_POINTS.some(bad => p.includes(bad)) || IGNORED_CATS.includes(c)) return;
-        
         if (inc > 0) {
             if (p.includes('SMARTMIZ')) incomeByFirm["Smartmiz"] += inc; 
             else incomeByFirm["Greenpen"] += inc; 
@@ -250,7 +289,6 @@
     });
     
     let globalIncome = incomeByFirm["Greenpen"] + incomeByFirm["Smartmiz"];
-    
     let gpRatio = globalIncome > 0 ? (incomeByFirm["Greenpen"] / globalIncome) : 0;
     let smRatio = globalIncome > 0 ? (incomeByFirm["Smartmiz"] / globalIncome) : 0;
 
@@ -297,25 +335,19 @@
     return {
         income: totalIncome, expense: totalExpense, profit: totalIncome - totalExpense,
         cashRatio: totalIncome > 0 ? (cashIncome / totalIncome * 100) : 0,
-        trend: trendData, 
-        points: pointsData, 
-        payments: payData, 
-        expenses: expData,
+        trend: trendData, points: pointsData, payments: payData, expenses: expData,
         detailedList: detailedList.sort((a,b) => new Date(b.date) - new Date(a.date)),
         incomeByFirm: incomeByFirm 
     };
   }
 
-  // --- CHARTLAR (DARK MODE QO'SHILDI) ---
   function renderCharts(stats) {
     const niceColors = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
     
-    // --- DARK MODE ANIQLASH VA RANGLAR ---
     const isDarkMode = document.body.classList.contains('dark-mode'); 
-    const chartTextColor = isDarkMode ? '#ffffff' : '#666666'; // Oq yoki to'q kulrang
-    const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'; // Panjara chiziqlari
+    const chartTextColor = isDarkMode ? '#ffffff' : '#666666'; 
+    const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'; 
 
-    // Trend
     const ctxTrend = document.getElementById('chartTrend');
     if(ctxTrend) {
         const sortedDates = Object.keys(stats.trend).sort();
@@ -325,33 +357,34 @@
             data: {
                 labels: sortedDates,
                 datasets: [
-                    { label: 'Kirim', data: sortedDates.map(d => stats.trend[d].inc), backgroundColor: '#10b981', borderRadius: 4 },
-                    { label: 'Chiqim', data: sortedDates.map(d => stats.trend[d].exp), backgroundColor: '#ef4444', borderRadius: 4 }
+                    { 
+                      label: 'Kirim', 
+                      data: sortedDates.map(d => stats.trend[d].inc), 
+                      backgroundColor: '#10b981', 
+                      borderRadius: 4,
+                      maxBarThickness: 40
+                    },
+                    { 
+                      label: 'Chiqim', 
+                      data: sortedDates.map(d => stats.trend[d].exp), 
+                      backgroundColor: '#ef4444', 
+                      borderRadius: 4,
+                      maxBarThickness: 40
+                    }
                 ]
             },
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false, 
                 scales: { 
-                    x: { 
-                        grid: { display: false },
-                        ticks: { color: chartTextColor } // X o'qi yozuvlari rangi
-                    },
-                    y: {
-                        grid: { color: chartGridColor }, // Y o'qi panjarasi
-                        ticks: { color: chartTextColor } // Y o'qi yozuvlari rangi
-                    }
+                    x: { grid: { display: false }, ticks: { color: chartTextColor } },
+                    y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
                 },
-                plugins: {
-                    legend: {
-                        labels: { color: chartTextColor } // Legenda yozuvi rangi
-                    }
-                }
+                plugins: { legend: { labels: { color: chartTextColor } } }
             }
         });
     }
 
-    // Payments
     const ctxPay = document.getElementById('chartPayments');
     if(ctxPay) {
         const legendBox = document.getElementById('pay-legend-container');
@@ -383,7 +416,6 @@
         });
     }
 
-    // Top Xarajatlar
     const ctxExp = document.getElementById('chartExpenses');
     if(ctxExp) {
         const expEntries = Object.entries(stats.expenses).sort((a,b) => b[1] - a[1]).slice(0, 5);
@@ -401,35 +433,33 @@
         });
     }
 
-    // Barcha Xarajatlar
     const ctxAllExp = document.getElementById('chartAllExpenses');
     if(ctxAllExp) {
         const allExpEntries = Object.entries(stats.expenses).sort((a,b) => b[1] - a[1]);
         destroyChart('allExp');
         CHART_INSTANCES['allExp'] = new Chart(ctxAllExp, {
             type: 'bar',
-            data: { labels: allExpEntries.map(e => e[0]), datasets: [{ label: 'Xarajat Summasi', data: allExpEntries.map(e => e[1]), backgroundColor: niceColors, borderRadius: 6 }] },
+            data: { 
+                labels: allExpEntries.map(e => e[0]), 
+                datasets: [{ 
+                    label: 'Xarajat Summasi', 
+                    data: allExpEntries.map(e => e[1]), 
+                    backgroundColor: niceColors, 
+                    borderRadius: 6,
+                    maxBarThickness: 50
+                }] 
+            },
             options: { 
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } }, 
                 scales: { 
-                    x: { 
-                        grid: { display: false }, 
-                        ticks: { 
-                            autoSkip: false, maxRotation: 0, minRotation: 0, font: { size: 11, weight: 'bold' },
-                            color: chartTextColor // RANG
-                        } 
-                    },
-                    y: {
-                         grid: { color: chartGridColor },
-                         ticks: { color: chartTextColor } // RANG
-                    }
+                    x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, font: { size: 11, weight: 'bold' }, color: chartTextColor } },
+                    y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
                 } 
             }
         });
     }
     
-    // Firmalar Tushumi
     const ctxPoints = document.getElementById('chartPoints');
     if(ctxPoints) {
         destroyChart('points');
@@ -441,29 +471,22 @@
                     label: 'Jami Tushum', 
                     data: [stats.incomeByFirm['Greenpen'], stats.incomeByFirm['Smartmiz']], 
                     backgroundColor: ['#10b981', '#3b82f6'], 
-                    borderRadius: 5 
+                    borderRadius: 5,
+                    maxBarThickness: 60
                 }] 
             },
             options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: { 
-                    x: { 
-                        grid: { display: false },
-                        ticks: { color: chartTextColor } // RANG
-                    },
-                    y: {
-                         grid: { color: chartGridColor },
-                         ticks: { color: chartTextColor } // RANG
-                    }
+                    x: { grid: { display: false }, ticks: { color: chartTextColor } },
+                    y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
                 }
             }
         });
     }
   }
 
-  // --- YORDAMCHI VA TIZIM ---
   function getStartEndDates(period) { const now = new Date(); let start = new Date(0), end = new Date(2100, 0, 1); if (period === 'this_month') { start = new Date(now.getFullYear(), now.getMonth(), 1); end = new Date(now.getFullYear(), now.getMonth() + 1, 0); } else if (period === 'last_month') { start = new Date(now.getFullYear(), now.getMonth() - 1, 1); end = new Date(now.getFullYear(), now.getMonth(), 0); } else if (period === 'this_year') { start = new Date(now.getFullYear(), 0, 1); end = new Date(now.getFullYear(), 11, 31); } else if (period === 'last_year') { start = new Date(now.getFullYear() - 1, 0, 1); end = new Date(now.getFullYear() - 1, 11, 31); } else if (period === 'custom') { let s = document.getElementById('date-start').value; let e = document.getElementById('date-end').value; if(s) start = new Date(s); else start = new Date(); if(e) end = new Date(e); else end = new Date(); } end.setHours(23, 59, 59, 999); start.setHours(0, 0, 0, 0); return { start, end }; }
   function toggleCustomDate(val) { const box = document.getElementById('custom-date-box'); if(!box) return; if(val === 'custom') { box.classList.remove('d-none'); if(!document.getElementById('date-start').value) { document.getElementById('date-start').valueAsDate = new Date(); document.getElementById('date-end').valueAsDate = new Date(); } } else { box.classList.add('d-none'); } }
   function parseMoney(val) { if(!val) return 0; let clean = String(val).replace(/[\s,]/g, ''); return parseFloat(clean) || 0; }
@@ -474,22 +497,36 @@
   function setPayInput(type, val) { let inp = document.querySelector(`.pay-input[data-type="${type}"]`); if(inp) inp.value = (val > 0) ? val : ""; }
   function calcBatchTotal() { let total = 0; document.querySelectorAll('.pay-input').forEach(i => total += (parseFloat(i.value)||0)); document.getElementById('batch-total').innerText = total.toLocaleString(); }
   function checkTransferCurrency() { let from = document.getElementById('transfer-from').value; let to = document.getElementById('transfer-to').value; let divSecond = document.getElementById('div-second-amount'); let labelMain = document.getElementById('label-amount-main'); labelMain.innerText = "SUMMA (UZS)"; divSecond.style.display = "none"; if(from === 'Dollar' || to === 'Dollar') { divSecond.style.display = "block"; } }
-  function loadBalances() { google.script.run.withSuccessHandler(function(bal) { if(bal) { if(document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm"; if(document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm"; if(document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar); } }).getRealTimeBalance(); }
+  
   function destroyChart(key) { if (CHART_INSTANCES[key]) CHART_INSTANCES[key].destroy(); }
   function checkFilter(item) { try { let searchText = document.getElementById('filter-search').value.toLowerCase().trim(); let startVal = document.getElementById('filter-start').value; let endVal = document.getElementById('filter-end').value; if (startVal || endVal) { let itemDate = new Date(item.date); if (startVal && itemDate < new Date(startVal)) return false; if (endVal && itemDate > new Date(endVal)) return false; } if (searchText !== "") { let content = ((item.point||"") + " " + (item.cat||"") + " " + (item.note||"") + " " + (item.pay||"")).toLowerCase(); if (!content.includes(searchText)) return false; } return true; } catch (err) { return true; } }
   function resetFilters() { if(document.getElementById('filter-search')) document.getElementById('filter-search').value = ""; if(document.getElementById('filter-start')) document.getElementById('filter-start').value = ""; if(document.getElementById('filter-end')) document.getElementById('filter-end').value = ""; renderCurrentView(); }
   function renderKPIs(stats) { animateValue("kpi-income", stats.income); animateValue("kpi-expense", stats.expense); animateValue("kpi-net-cash", stats.profit); const ratioEl = document.getElementById("kpi-cash-ratio"); if(ratioEl) ratioEl.innerText = stats.cashRatio.toFixed(1) + "%"; }
   function animateValue(id, end) { const obj = document.getElementById(id); if(obj) obj.innerText = fmt(end) + " so'm"; }
   function renderDashTable(list) { const tbody = document.getElementById('dash-table-body'); if(!tbody) return; tbody.innerHTML = ""; if(list.length === 0) { tbody.innerHTML = "<tr><td colspan='6' class='text-muted py-3'>Ma'lumot topilmadi</td></tr>"; return; } list.slice(0, 100).forEach(item => { let tr = document.createElement('tr'); tr.innerHTML = `<td>${formatDate(item.date)}</td><td class="fw-bold text-truncate" style="max-width: 150px;">${item.point||item.firm||'-'}</td><td class="small text-muted text-truncate" style="max-width: 120px;">${item.cat||'-'}</td><td><span class="badge bg-light text-dark border">${item.pay||'-'}</span></td><td class="${item.inc>0?'text-success fw-bold':'text-muted'}">${item.inc>0?fmt(item.inc):'-'}</td><td class="${item.exp>0?'text-danger fw-bold':'text-muted'}">${item.exp>0?fmt(item.exp):'-'}</td>`; tbody.appendChild(tr); }); }
-  function loginSystem(e) { if(e) e.preventDefault(); var u = document.getElementById('loginUser').value.toLowerCase().trim(); var p = document.getElementById('loginPass').value.trim(); var err = document.getElementById('loginError'); var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p); if (foundUser) { USER_ROLE = foundUser.r; if(document.getElementById('user-display')) document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1); document.getElementById('login-screen').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; applyRolePermissions(); loadDashboard(); loadDropdowns(); refreshList(); loadBalances(); } else { err.innerText = "Login yoki parol noto'g'ri!"; } }
+  function loginSystem(e) { if(e) e.preventDefault(); var u = document.getElementById('loginUser').value.toLowerCase().trim(); var p = document.getElementById('loginPass').value.trim(); var err = document.getElementById('loginError'); var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p); if (foundUser) { USER_ROLE = foundUser.r; if(document.getElementById('user-display')) document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1); document.getElementById('login-screen').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; applyRolePermissions(); loadDashboard(); loadDropdowns(); refreshList(); calculateLocalBalance(); } else { err.innerText = "Login yoki parol noto'g'ri!"; } }
   function logoutSystem() { USER_ROLE = ""; ALL_DATA = []; DASH_DATA = []; document.getElementById('main-app').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; }
   function applyRolePermissions() { if (USER_ROLE.toLowerCase() !== 'admin') { let dashMenu = document.getElementById('menu-dashboard'); if(dashMenu) dashMenu.style.display = 'none'; let listBtn = document.getElementById('link-list'); if(listBtn) switchTab('list', listBtn); } else { let dashBtn = document.querySelector('.nav-link.active'); switchTab('dashboard', dashBtn); } }
-  function switchTab(tabName, element) { if(tabName === 'dashboard' && USER_ROLE.toLowerCase() !== 'admin') { Swal.fire('Ruxsat yo\'q', '', 'error'); return; } document.getElementById('view-dashboard').style.display = 'none'; document.getElementById('view-list').style.display = 'none'; document.getElementById('view-about').style.display = 'none'; document.getElementById('view-' + tabName).style.display = 'block'; if(tabName === 'dashboard') loadDashboard(); if(tabName === 'list') { refreshList(); loadBalances(); } document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if(element) element.classList.add('active'); }
-  function setTransactionType(type, btnElement) { CURRENT_TYPE = type; const buttons = document.querySelectorAll('.btn-custom'); buttons.forEach(btn => btn.classList.remove('active-kirim', 'active-chiqim', 'active-boshqa')); const body = document.body; body.classList.remove('theme-green', 'theme-red', 'theme-blue'); if (type === 'Kirim') { body.classList.add('theme-green'); if(btnElement) btnElement.classList.add('active-kirim'); else { let btn = document.querySelector('.btn-custom:nth-child(1)'); if(btn) btn.classList.add('active-kirim'); } } else if (type === 'Chiqim') { body.classList.add('theme-red'); if(btnElement) btnElement.classList.add('active-chiqim'); else { let btn = document.querySelector('.btn-custom:nth-child(2)'); if(btn) btn.classList.add('active-chiqim'); } } else { body.classList.add('theme-blue'); if(btnElement) btnElement.classList.add('active-boshqa'); else { let btn = document.querySelector('.btn-custom:nth-child(3)'); if(btn) btn.classList.add('active-boshqa'); } } renderCurrentView(); }
-  function refreshList() { const tbody = document.getElementById('table-body'); if(tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3">Yuklanmoqda...</td></tr>`; google.script.run.withSuccessHandler(saveAndRender).getTransactionsList(); }
-  function saveAndRender(data) { ALL_DATA = data || []; renderCurrentView(); }
   
-  // --- LIST RENDER WITH DATE SORTING FIX ---
+  function setTransactionType(type, btnElement) { CURRENT_TYPE = type; const buttons = document.querySelectorAll('.btn-custom'); buttons.forEach(btn => btn.classList.remove('active-kirim', 'active-chiqim', 'active-boshqa')); const body = document.body; body.classList.remove('theme-green', 'theme-red', 'theme-blue'); if (type === 'Kirim') { body.classList.add('theme-green'); if(btnElement) btnElement.classList.add('active-kirim'); else { let btn = document.querySelector('.btn-custom:nth-child(1)'); if(btn) btn.classList.add('active-kirim'); } } else if (type === 'Chiqim') { body.classList.add('theme-red'); if(btnElement) btnElement.classList.add('active-chiqim'); else { let btn = document.querySelector('.btn-custom:nth-child(2)'); if(btn) btn.classList.add('active-chiqim'); } } else { body.classList.add('theme-blue'); if(btnElement) btnElement.classList.add('active-boshqa'); else { let btn = document.querySelector('.btn-custom:nth-child(3)'); if(btn) btn.classList.add('active-boshqa'); } } renderCurrentView(); }
+  
+  function refreshList(silentMode = false) { 
+      const tbody = document.getElementById('table-body'); 
+      if (!silentMode && ALL_DATA.length === 0) {
+          if(tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3"><div class="spinner-border text-primary" role="status"></div><br>Yuklanmoqda...</td></tr>`; 
+      }
+      google.script.run.withSuccessHandler(saveAndRender).getTransactionsList(); 
+  }
+
+  function saveAndRender(data) { 
+      ALL_DATA = data || []; 
+      calculateLocalBalance(); 
+      const listTab = document.getElementById('view-list');
+      if (listTab && listTab.style.display !== 'none') {
+          renderCurrentView();
+      }
+  }
+  
   function renderCurrentView() { 
     try { 
       const thead = document.querySelector('#main-table thead'); 
@@ -510,7 +547,6 @@
         let grouped = {}; 
         filteredItems.forEach(item => { let key = item.rowId || ("temp_" + item.date + item.point); if (!grouped[key]) { grouped[key] = { rowId: item.rowId, date: item.date, point: item.point, note: item.note, naqd: 0, p2p: 0, uzcard: 0, humo: 0, perech: 0, total: 0 }; } let val = parseMoney(item.kirim); let pType = String(item.pay).toLowerCase(); if(pType.includes('naqd')) grouped[key].naqd += val; else if(pType.includes('p2p')) grouped[key].p2p += val; else if(pType.includes('uzcard')) grouped[key].uzcard += val; else if(pType.includes('humo')) grouped[key].humo += val; else if(pType.includes('perech')) grouped[key].perech += val; else grouped[key].naqd += val; grouped[key].total += val; }); 
         let groupedList = Object.values(grouped); 
-        // SORTING: Newest First
         groupedList.sort((a, b) => new Date(b.date) - new Date(a.date)); 
         
         if (groupedList.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
@@ -524,10 +560,7 @@
         thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Kategoriya</th><th class="th-gray">To'lov Turi</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`; 
         
         let filteredData = ALL_DATA.filter(item => { return parseMoney(item.chiqim) > 0 && !item.cat.includes("O'tkazma") && item.cat !== 'Transfer' && checkFilter(item); }); 
-        
-        // --- FIX ADDED HERE: SORT BY DATE ---
         filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
         if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
         
         filteredData.forEach(item => { 
@@ -538,10 +571,7 @@
         thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-red">Qayerdan</th><th class="th-green">Qayerga</th><th class="th-red">Chiqim</th><th class="th-green">Kirim</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`; 
         
         let filteredData = ALL_DATA.filter(item => { return (item.cat === "Transfer" || item.cat.includes("O'tkazma")) && checkFilter(item); }); 
-        
-        // --- FIX ADDED HERE: SORT BY DATE ---
         filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
         if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
         
         filteredData.forEach(item => { 
@@ -558,138 +588,172 @@
     } 
   }
 
-  // --- FORM VALIDATION & SUBMIT ---
   function handleFormSubmit(e) { 
     e.preventDefault(); 
-    const btn = document.querySelector('.btn-save'); 
+    
     const type = document.getElementById('currentTab').value; 
     const mode = document.getElementById('formMode').value; 
+    const dateVal = document.getElementById('dateInput').value;
     const note = document.getElementById('noteInput').value; 
     const point = document.getElementById('d-point').value; 
+    
+    if(!dateVal) {
+        Swal.fire({ title: 'Xatolik!', text: 'Iltimos, sanani tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+    }
 
-    function showError(msg) { 
-        Swal.fire({ icon: 'warning', iconColor: '#d33', title: 'Diqqat!', text: msg, confirmButtonColor: '#d33', confirmButtonText: 'Tushunarli' }); 
-    } 
+    if (type === 'Kirim') {
+        if(!point || point === "") {
+             Swal.fire({ title: 'Diqqat!', text: 'Iltimos, SAVDO NUQTASINI tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+        }
 
-    // 1. Point Validatsiyasi (faqat Point ko'rinadigan joyda)
-    if ((type === 'Kirim' || type === 'Chiqim') && document.getElementById('div-point').style.display !== 'none') { 
-        if (!point || point === '') { 
-            showError("Iltimos, SAVDO NUQTASINI tanlang!"); 
-            return; 
-        } 
+        let hasMoney = false;
+        let inputs = document.querySelectorAll('.pay-input'); 
+        for (let inp of inputs) { 
+            let v = parseFloat(inp.value) || 0; 
+            if (v > 0) hasMoney = true; 
+            if (v > LIMIT_SUMMA) { Swal.fire({ title: 'Xatolik!', text: `${inp.getAttribute('data-type')} uchun kiritilgan summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; }
+        }
+        if(!hasMoney) {
+            Swal.fire({ title: 'Diqqat!', text: 'Iltimos, kamida bitta to\'lov summasini kiriting (Naqd, P2P va h.k)!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+        }
     } 
+    
+    else if (type === 'Chiqim') {
+        let amount = parseFloat(document.getElementById('single-amount').value) || 0;
+        let cat = document.getElementById('d-cat').value;
+        let pay = document.getElementById('d-pay').value;
 
-    // 2. Izoh validatsiyasi
-    if (note.length > LIMIT_IZOH) { 
-        showError(`Izoh juda uzun! Maksimal ${LIMIT_IZOH} ta belgi kiritish mumkin!`); 
-        return; 
-    } 
+        if(amount <= 0) { Swal.fire({ title: 'Diqqat!', text: 'Chiqim summasini kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+        if(amount > LIMIT_SUMMA) { Swal.fire({ title: 'Xatolik!', text: `Summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; }
+
+        if(!cat || cat === "") { Swal.fire({ title: 'Diqqat!', text: 'Iltimos, KATEGORIYAni tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+        if(!pay || pay === "") { Swal.fire({ title: 'Diqqat!', text: 'Iltimos, TO\'LOV TURIni tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+    }
+    
+    else if (type === 'Otkazma') {
+        let amount = parseFloat(document.getElementById('single-amount').value) || 0; 
+        let usdAmount = parseFloat(document.getElementById('second-amount').value) || 0; 
+        let from = document.getElementById('transfer-from').value;
+        let to = document.getElementById('transfer-to').value;
+
+        if(!from || from === "") { Swal.fire({ title: 'Diqqat!', text: '"Qayerdan" maydoni bo\'sh bo\'lishi mumkin emas!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+        if(!to || to === "") { Swal.fire({ title: 'Diqqat!', text: '"Qayerga" maydoni bo\'sh bo\'lishi mumkin emas!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+        if(from === to) { Swal.fire({ title: 'Xatolik!', text: 'Bir xil hisoblar o\'rtasida o\'tkazma qilib bo\'lmaydi!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+
+        if (from === 'Dollar' || to === 'Dollar') {
+             if (usdAmount <= 0) {
+                 Swal.fire({ title: 'Diqqat!', text: 'Iltimos, Dollar summasini (USD) kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+             }
+             if (usdAmount > LIMIT_SUMMA) { 
+                 Swal.fire({ title: 'Xatolik!', text: `Dollar summasi 999 999 999 USDdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; 
+             }
+        }
+
+        if (amount <= 0) {
+             Swal.fire({ title: 'Diqqat!', text: 'Iltimos, So\'m summasini (UZS) kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+        }
+        if (amount > LIMIT_SUMMA) { 
+             Swal.fire({ title: 'Xatolik!', text: `So'm summasi(UZS) 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; 
+        }
+    }
+
+    if(note.length > LIMIT_IZOH) {
+        Swal.fire({ title: 'Diqqat!', text: `Izoh juda uzun! Maksimum ${LIMIT_IZOH} ta belgi!`, icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+    }
 
     let formData = { 
         rowId: document.getElementById('editRowId').value, 
+        formMode: mode, 
         type: type, 
-        date: document.getElementById('dateInput').value, 
+        date: dateVal, 
         point: point, 
         firm: "", 
         note: note 
     }; 
 
-    // --- KIRIM LOGIKASI ---
+    if (mode === 'add') {
+        formData.rowId = new Date().getTime().toString();
+    }
+
     if (type === 'Kirim') { 
         let payments = {}; 
-        let hasVal = false; 
-        let totalSum = 0; 
         let inputs = document.querySelectorAll('.pay-input'); 
         for (let inp of inputs) { 
             let v = parseFloat(inp.value) || 0; 
-            if (v > 0) { 
-                if (v > LIMIT_SUMMA) { 
-                    showError(`Xatolik! ${inp.getAttribute('data-type')} uchun kiritilgan summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`); 
-                    return; 
-                } 
-                payments[inp.getAttribute('data-type')] = v; 
-                hasVal = true; 
-                totalSum += v; 
-            } 
-        } 
-        if(!hasVal) { 
-            showError("Iltimos, kamida bitta summa kiriting!"); 
-            return; 
-        } 
-        if (totalSum > LIMIT_SUMMA) { 
-            showError(`Xatolik! Jami summa summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`); 
-            return; 
+            if (v > 0) payments[inp.getAttribute('data-type')] = v; 
         } 
         formData.payments = payments; 
-    } 
-    // --- CHIQIM VA O'TKAZMA LOGIKASI ---
-    else { 
-        let amt = parseFloat(document.getElementById('single-amount').value) || 0; 
-        if (amt > LIMIT_SUMMA) { showError(`Summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`); return; } 
-        if (amt <= 0) { showError("Iltimos, kamida bitta summa kiriting!"); return; } 
-
+    } else { 
+        formData.amount = parseFloat(document.getElementById('single-amount').value) || 0; 
         if (type === 'Chiqim') { 
-            // --- VALIDATSIYA: Kategoriya va To'lov usuli ---
-            let catVal = document.getElementById('d-cat').value;
-            let payVal = document.getElementById('d-pay').value;
-
-            if (!catVal || catVal === '') {
-                showError("Iltimos, KATEGORIYANI tanlang!");
-                return;
-            }
-            if (!payVal || payVal === '') {
-                showError("Iltimos, TO'LOV USULINI tanlang!");
-                return;
-            }
-            // --- FIX END ---
-            
-            formData.amount = amt; 
-            formData.category = catVal; 
-            formData.payment = payVal; 
+            formData.category = document.getElementById('d-cat').value; 
+            formData.payment = document.getElementById('d-pay').value; 
         } else if (type === 'Otkazma') { 
-            let tFrom = document.getElementById('transfer-from').value; 
-            let tTo = document.getElementById('transfer-to').value; 
-            if(!tFrom || tFrom === '') { showError("Iltimos, pul 'Qayerdan' ketyotganini tanlang!"); return; } 
-            if(!tTo || tTo === '') { showError("Iltimos, pul 'Qayerga' kelyotganini tanlang!"); return; } 
-            if(tFrom === tTo) { showError("Xatolik! Bir xil hisobni tanlash mumkin emas!"); return; } 
-            formData.amount = amt; 
             formData.amountIn = parseFloat(document.getElementById('second-amount').value) || 0; 
-            formData.transferFrom = tFrom; 
-            formData.transferTo = tTo; 
+            formData.transferFrom = document.getElementById('transfer-from').value; 
+            formData.transferTo = document.getElementById('transfer-to').value; 
             formData.point = "O'tkazma"; 
         } 
     } 
 
-    // Saqlash jarayoni
-    btn.disabled = true; 
-    btn.innerHTML = "<span class='spinner-border spinner-border-sm'></span> Saqlanmoqda..."; 
+    updateLocalDataOptimistically(formData); 
+    transModal.hide();
+    
+    Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
 
     google.script.run.withSuccessHandler(function() { 
-        transModal.hide(); 
-        refreshList(); 
         loadDashboard(); 
-        loadBalances(); 
-        btn.disabled = false; 
-        btn.innerText = "SAQLASH"; 
-        Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false }); 
+        loadBalances();
     }).withFailureHandler(function(err) { 
-        Swal.fire({ icon: 'error', title: 'Xatolik!', text: err }); 
-        btn.disabled = false; 
-        btn.innerText = "SAQLASH"; 
+        Swal.fire({ icon: 'error', title: 'Server Xatoligi!', text: 'Ma\'lumot saqlanmadi. Sahifa yangilanmoqda...' });
+        refreshList(); 
     }).saveTransaction(formData); 
   }
 
-  // --- MODAL OCHISH (Sanani bugungi kunga cheklash) ---
+  function updateLocalDataOptimistically(data) {
+      if (data.formMode === 'edit') {
+          ALL_DATA = ALL_DATA.filter(item => item.rowId != data.rowId);
+      }
+
+      if (data.type === 'Kirim') {
+          for (let payType in data.payments) {
+              ALL_DATA.push({
+                  date: data.date, firm: data.firm, point: data.point, cat: "Savdo tushumi", pay: payType,
+                  kirim: data.payments[payType], chiqim: 0, note: data.note, rowId: data.rowId
+              });
+          }
+      } else if (data.type === 'Chiqim') {
+          ALL_DATA.push({
+              date: data.date, firm: data.firm, point: data.point, cat: data.category, pay: data.payment,
+              kirim: 0, chiqim: data.amount, note: data.note, rowId: data.rowId
+          });
+      } else if (data.type === 'Otkazma') {
+           let mainAmount = data.amount;
+           let usdAmount = data.amountIn || 0;
+           let source = data.transferFrom;
+           let dest = data.transferTo;
+           
+           let finalChiqim = (source === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+           let finalKirim = (dest === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+
+           ALL_DATA.push({
+              date: data.date, firm: "", point: "O'tkazma", cat: "Transfer", pay: source + " -> " + dest,
+              kirim: finalKirim, chiqim: finalChiqim, note: data.note, rowId: data.rowId
+          });
+      }
+
+      renderCurrentView();
+      calculateLocalBalance(); 
+  }
+
   function openModal(mode) { 
     document.getElementById('mainForm').reset(); 
     document.getElementById('formMode').value = mode; 
-    
     let now = new Date(); 
     let today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
-    
     const dateInput = document.getElementById('dateInput');
     dateInput.value = today; 
-    dateInput.max = today; // <--- Sana tanlashni bugungi kun bilan cheklaydi
+    dateInput.max = today; 
 
     if(document.getElementById('batch-total')) document.getElementById('batch-total').innerText = "0"; 
     transModal = new bootstrap.Modal(document.getElementById('transModal')); 
@@ -701,8 +765,95 @@
     transModal.show(); 
   }
 
-  function setupFormUI(type) { document.getElementById('currentTab').value = type; ['form-kirim','form-single'].forEach(id=>document.getElementById(id).style.display='none'); document.getElementById('div-point').style.display = (type==='Kirim')?'block':'none'; if(type==='Kirim') document.getElementById('form-kirim').style.display='block'; else { document.getElementById('form-single').style.display='block'; document.getElementById('div-cat').style.display = (type==='Chiqim')?'block':'none'; document.getElementById('div-pay').style.display = (type==='Chiqim')?'block':'none'; document.getElementById('div-transfer-fields').style.display = (type==='Otkazma')?'block':'none'; document.getElementById('label-amount-main').innerText = (type==='Otkazma')?"SUMMA (UZS)":"SUMMA"; } }
+  function setupFormUI(type) { 
+      document.getElementById('currentTab').value = type; 
+      
+      ['form-kirim','form-single'].forEach(id => document.getElementById(id).style.display='none'); 
+      
+      document.getElementById('div-second-amount').style.display = 'none'; 
+
+      document.getElementById('div-point').style.display = (type === 'Kirim') ? 'block' : 'none'; 
+      
+      if (type === 'Kirim') {
+          document.getElementById('form-kirim').style.display = 'block'; 
+      } else { 
+          document.getElementById('form-single').style.display = 'block'; 
+          
+          document.getElementById('div-cat').style.display = (type === 'Chiqim') ? 'block' : 'none'; 
+          document.getElementById('div-pay').style.display = (type === 'Chiqim') ? 'block' : 'none'; 
+          
+          document.getElementById('div-transfer-fields').style.display = (type === 'Otkazma') ? 'block' : 'none'; 
+          
+          document.getElementById('label-amount-main').innerText = (type === 'Otkazma') ? "SUMMA (UZS)" : "SUMMA"; 
+      } 
+  }
   function editGroup(index) { let item = GROUPED_DATA[index]; if(!item) return; setTransactionType('Kirim'); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = item.rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('d-point').value = item.point; document.getElementById('noteInput').value = item.note; setPayInput('Naqd', item.naqd); setPayInput('P2P', item.p2p); setPayInput('Uzcard', item.uzcard); setPayInput('Humo', item.humo); setPayInput('Perechislenie', item.perech); calcBatchTotal(); }
-  function editItem(rowId) { const item = ALL_DATA.find(r => r.rowId == rowId); if (!item) return; let type = (item.cat === 'Transfer' || item.cat.includes("O'tkazma")) ? 'Otkazma' : 'Chiqim'; setTransactionType(type); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('noteInput').value = item.note; if(type === 'Chiqim') { document.getElementById('single-amount').value = parseMoney(item.chiqim); document.getElementById('d-pay').value = item.pay; document.getElementById('d-cat').value = item.cat; } else { let k = parseMoney(item.kirim); let c = parseMoney(item.chiqim); let big = (k > c) ? k : c; document.getElementById('single-amount').value = big; if(item.pay && item.pay.includes('->')) { let parts = item.pay.split('->'); document.getElementById('transfer-from').value = parts[0].trim(); document.getElementById('transfer-to').value = parts[1].trim(); } checkTransferCurrency(); } }
-  function deleteItem(rowId) { if(!rowId) return; Swal.fire({ title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#198754',confirmButtonText: 'Ha',cancelButtonText: 'Yo\'q' }).then((r) => { if(r.isConfirmed) { google.script.run.withSuccessHandler(()=>{ refreshList(); loadDashboard(); loadBalances(); Swal.fire('Muvaffaqiyatli!', '', 'success'); }).deleteTransaction(rowId); } }); }
+  function editItem(rowId) { 
+      const item = ALL_DATA.find(r => r.rowId == rowId); 
+      if (!item) return; 
+      
+      let type = (item.cat === 'Transfer' || item.cat.includes("O'tkazma")) ? 'Otkazma' : 'Chiqim'; 
+      setTransactionType(type); 
+      openModal('edit'); 
+      document.getElementById('modalTitle').innerText = "Tahrirlash"; 
+      document.getElementById('editRowId').value = rowId; 
+      document.getElementById('dateInput').value = formatDateISO(item.date); 
+      document.getElementById('noteInput').value = item.note; 
+
+      if(type === 'Chiqim') { 
+          document.getElementById('single-amount').value = parseMoney(item.chiqim); 
+          document.getElementById('d-pay').value = item.pay; 
+          document.getElementById('d-cat').value = item.cat; 
+      } else { 
+          let k = parseMoney(item.kirim); 
+          let c = parseMoney(item.chiqim); 
+          let val = (k > c) ? k : c; 
+          
+          if(item.pay && item.pay.includes('->')) { 
+              let parts = item.pay.split('->'); 
+              let from = parts[0].trim();
+              let to = parts[1].trim();
+              
+              document.getElementById('transfer-from').value = from; 
+              document.getElementById('transfer-to').value = to; 
+              
+              checkTransferCurrency(); 
+
+              if (from === 'Dollar' || to === 'Dollar') {
+                  document.getElementById('second-amount').value = val;
+                  document.getElementById('single-amount').value = ""; 
+              } else {
+                  document.getElementById('single-amount').value = val;
+                  document.getElementById('second-amount').value = ""; 
+              }
+          } 
+      } 
+  }
+
+  function deleteItem(rowId) {
+      if (!rowId) return;
+      Swal.fire({
+          title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?',
+          icon: 'warning',
+          iconColor: '#d33',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#198754',
+          confirmButtonText: 'Ha',
+          cancelButtonText: 'Yo\'q'
+      }).then((r) => {
+          if (r.isConfirmed) {
+              ALL_DATA = ALL_DATA.filter(item => item.rowId != rowId);
+              renderCurrentView();
+              calculateLocalBalance(); 
+
+              Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+
+              google.script.run
+                  .withSuccessHandler(() => { loadDashboard(); })
+                  .withFailureHandler((err) => { Swal.fire({ icon: 'error', title: 'Xatolik!', text: 'Internet bilan aloqa yo\'q!' }); refreshList(); })
+                  .deleteTransaction(rowId);
+          }
+      });
+  }
 </script>
