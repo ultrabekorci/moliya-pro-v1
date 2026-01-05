@@ -2,24 +2,16 @@
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
   
   :root {
-    /* --primary-color: Bu endi faqat SIDEBAR va TUGMALAR uchun (Doimiy Ko'k) */
     --primary-color: #0A2558; 
-    
-    /* --active-color: Bu O'ZGARUVCHAN rang (Modal va aktiv elementlar uchun) */
-    /* Standart holatda Yashil (Kirim) bo'lib turadi */
     --active-color: #198754; 
-    
     --primary-light: #0d6efd;
     --hover-color: #081D45;
-    
-    /* Yangi Dashboard uchun ranglar */
     --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
   }
 
-  /* Mavzuga qarab o'zgaruvchan rangni almashtiramiz */
-  body.theme-green { --active-color: #198754; } /* Yashil */
-  body.theme-red   { --active-color: #dc3545; } /* Qizil */
-  body.theme-blue  { --active-color: #0d6efd; } /* Ko'k */
+  body.theme-green { --active-color: #198754; }
+  body.theme-red   { --active-color: #dc3545; }
+  body.theme-blue  { --active-color: #0d6efd; }
 
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
   
@@ -28,12 +20,11 @@
     color: #000 !important; 
   }
 
-  /* --- SIDEBAR (DOIMIY RANG) --- */
   .sidebar { 
     position: fixed; 
     height: 100%; 
     width: 240px; 
-    background: #0A2558 !important; /* RANG O'ZGARMAYDI */
+    background: #0A2558 !important;
     transition: all 0.5s ease; 
     z-index: 100; 
   }
@@ -51,10 +42,8 @@
   .sidebar .nav-links li i { min-width: 60px; text-align: center; font-size: 18px; color: #fff; }
   .sidebar .nav-links li a .links_name { color: #fff; font-size: 15px; font-weight: 400; white-space: nowrap; }
 
-  /* --- ASOSIY CONTENT --- */
   .home-section { position: relative; background: #f5f6fa; min-height: 100vh; width: calc(100% - 240px); left: 240px; transition: all 0.5s ease; }
   
-  /* --- HEADER (NAVBAR) --- */
   nav { 
     display: flex; justify-content: space-between; height: 80px; 
     background: #fff; align-items: center; position: sticky; top: 0; 
@@ -63,7 +52,6 @@
   
   .home-content { padding: 20px; }
 
-  /* --- JADVAL DIZAYNI --- */
   .custom-table-container {
     background: #fff;
     padding: 0; 
@@ -96,7 +84,6 @@
     font-size: 14px;
   }
   
-  /* --- TUGMALAR --- */
   .btn-group-custom {
     display: flex;
     gap: 10px;
@@ -115,15 +102,11 @@
     border-radius: 8px;
   }
 
-  .btn-custom:hover {
-    background: #dee2e6;
-  }
-
+  .btn-custom:hover { background: #dee2e6; }
   .btn-custom.active-kirim { background: #198754; color: #fff; box-shadow: 0 4px 6px rgba(25, 135, 84, 0.4); }
   .btn-custom.active-chiqim { background: #dc3545; color: #fff; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.4); }
   .btn-custom.active-boshqa { background: #0d6efd; color: #fff; box-shadow: 0 4px 6px rgba(13, 110, 253, 0.4); }
 
-  /* Responsive */
   @media (max-width: 1000px) {
     .overview-boxes .box{ width: calc(100% / 2 - 15px); margin-bottom: 15px; }
   }
@@ -134,7 +117,6 @@
     .home-section nav{ width: calc(100% - 60px); left: 60px; }
   }
 
-  /* === ABOUT PRO === */
   .about-pro {
     background:
       radial-gradient(circle at top right, #e0e7ff, transparent 40%),
@@ -189,10 +171,6 @@
   .dev-role { font-weight: 700; color: #4f46e5; margin-bottom: 6px; }
   .dev-quote { font-style: italic; color: #475569; margin-bottom: 14px; }
 
-  /* =========================================
-     YANGI DASHBOARD STILLARI (V2.0)
-  ========================================= */
-  
   .dash-filter-bar { 
     background: #fff; 
     padding: 15px; 
@@ -201,7 +179,6 @@
     margin-bottom: 20px; 
   }
   
-  /* KPI KARTALAR */
   .kpi-card { 
     background: #fff; 
     border-radius: 16px; 
@@ -240,7 +217,6 @@
     padding: 2px 8px; border-radius: 20px; 
   }
   
-  /* GRAFIK QUTISI */
   .chart-box { 
     background: #fff; 
     border-radius: 16px; 
@@ -257,7 +233,6 @@
     display: flex; justify-content: space-between; align-items: center; 
   }
 
-  /* UTILITY RANGLAR */
   .bg-indigo-light { background: #e0e7ff; color: #4338ca; }
   .bg-emerald-light { background: #d1fae5; color: #059669; }
   .bg-rose-light { background: #ffe4e6; color: #be123c; }
@@ -266,7 +241,6 @@
   .text-trend-up { color: #10b981; background: #ecfdf5; }
   .text-trend-down { color: #ef4444; background: #fef2f2; }
 
-  /* DARK MODE UCHUN DASHBOARD FIXLARI */
   body.dark-mode .dash-filter-bar,
   body.dark-mode .kpi-card,
   body.dark-mode .chart-box {
@@ -276,21 +250,27 @@
   }
   
   body.dark-mode .kpi-title,
-  body.dark-mode .chart-title span {
-      color: #fff !important;
-  }
-  
+  body.dark-mode .chart-title span,
   body.dark-mode .kpi-value {
       color: #fff !important;
   }
+
   body.dark-mode .dash-filter-bar .form-select option {
       background-color: #ffffff !important;
       color: #1e293b  !important;
   }
 
-  /* Dark Mode: Specific Point Total */
   body.dark-mode #specific-point-total {
       color: #3b82f6 !important;
   }
 
+  body.dark-mode .kpi-card .text-muted,
+  body.dark-mode .chart-box .text-muted,
+  body.dark-mode .chart-box span.text-muted {
+      color: #cbd5e1 !important;
+  }
+
+  body.dark-mode .chart-box .text-dark {
+      color: #ffffff !important;
+  }
 </style>
