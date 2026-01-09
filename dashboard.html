@@ -1,23 +1,113 @@
 <style>
-  .dash-filter-bar { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px; }
-  
-  .kpi-card { background: #fff; border-radius: 16px; padding: 20px; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: transform 0.3s; height: 100%; border: 1px solid #eef2f7; }
-  .kpi-card:hover { transform: translateY(-5px); }
-  .kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 10px; }
-  .kpi-title { font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-  .kpi-value { font-size: 26px; font-weight: 800; color: #1e293b; margin: 5px 0; }
-  .kpi-trend { font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; }
-  
-  .chart-box { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); height: 100%; margin-bottom: 20px; border: 1px solid #eef2f7; }
-  .chart-title { font-size: 16px; font-weight: 700; color: #334155; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+  .dash-filter-bar {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    margin-bottom: 20px;
+  }
 
-  .bg-indigo-light { background: #e0e7ff; color: #4338ca; }
-  .bg-emerald-light { background: #d1fae5; color: #059669; }
-  .bg-rose-light { background: #ffe4e6; color: #be123c; }
-  .bg-amber-light { background: #fef3c7; color: #d97706; }
-  
-  .text-trend-up { color: #10b981; background: #ecfdf5; }
-  .text-trend-down { color: #ef4444; background: #fef2f2; }
+  .kpi-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s;
+    height: 100%;
+    border: 1px solid #eef2f7;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-5px);
+  }
+
+  .kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .kpi-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 5px 0;
+  }
+
+  .kpi-trend {
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .chart-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    margin-bottom: 20px;
+    border: 1px solid #eef2f7;
+  }
+
+  .chart-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .bg-indigo-light {
+    background: #e0e7ff;
+    color: #4338ca;
+  }
+
+  .bg-emerald-light {
+    background: #d1fae5;
+    color: #059669;
+  }
+
+  .bg-rose-light {
+    background: #ffe4e6;
+    color: #be123c;
+  }
+
+  .bg-amber-light {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  .text-trend-up {
+    color: #10b981;
+    background: #ecfdf5;
+  }
+
+  .text-trend-down {
+    color: #ef4444;
+    background: #fef2f2;
+  }
 </style>
 
 <div class="container-fluid p-0">
@@ -54,7 +144,8 @@
     </div>
 
     <div class="ms-auto text-end">
-        <button class="btn btn-primary shadow-sm" onclick="loadDashboard()"><i class='bx bx-refresh'></i> Yangilash</button>
+      <button class="btn btn-primary shadow-sm" onclick="loadDashboard()"><i class='bx bx-refresh'></i>
+        Yangilash</button>
     </div>
   </div>
 
@@ -65,7 +156,7 @@
           <div>
             <div class="kpi-title">Jami Tushum</div>
             <div class="kpi-value" id="kpi-income">0</div>
-            <div class="kpi-trend" id="trend-income">Hozircha 0%</div>
+            <div class="kpi-trend" id="trend-income"></div>
           </div>
           <div class="kpi-icon bg-indigo-light"><i class='bx bx-trending-up'></i></div>
         </div>
@@ -78,7 +169,7 @@
           <div>
             <div class="kpi-title">Jami Xarajat</div>
             <div class="kpi-value text-danger" id="kpi-expense">0</div>
-            <small class="text-muted" style="font-size: 11px;">* Umumiy xarajatlar taqsimlandi</small>
+            <div class="kpi-trend" id="trend-expense"></div>
           </div>
           <div class="kpi-icon bg-rose-light"><i class='bx bx-trending-down'></i></div>
         </div>
@@ -91,7 +182,7 @@
           <div>
             <div class="kpi-title">Sof Pul Oqimi</div>
             <div class="kpi-value" id="kpi-net-cash">0</div>
-            <div class="kpi-trend" id="trend-profit">Foyda</div>
+            <div class="kpi-trend" id="trend-profit"></div>
           </div>
           <div class="kpi-icon bg-emerald-light"><i class='bx bx-wallet'></i></div>
         </div>
@@ -104,7 +195,7 @@
           <div>
             <div class="kpi-title">Naqd Pul Ulushi</div>
             <div class="kpi-value text-warning" id="kpi-cash-ratio">0%</div>
-            <small class="text-muted">Likvidlik darajasi</small>
+            <div class="kpi-trend" id="trend-cash"></div>
           </div>
           <div class="kpi-icon bg-amber-light"><i class='bx bx-pie-chart-alt-2'></i></div>
         </div>
@@ -116,7 +207,7 @@
     <div class="col-lg-8">
       <div class="chart-box">
         <div class="chart-title">
-           <span><i class='bx bx-line-chart text-primary me-2'></i> Kirim vs Chiqim</span>
+          <span><i class='bx bx-line-chart text-primary me-2'></i> Kirim vs Chiqim</span>
         </div>
         <div style="height: 300px;">
           <canvas id="chartTrend"></canvas>
@@ -127,26 +218,26 @@
     <div class="col-lg-4">
       <div class="chart-box">
         <div class="chart-title">
-           <span><i class='bx bx-pie-chart-alt-2 text-danger me-2'></i> Top 5 Xarajatlar</span>
+          <span><i class='bx bx-pie-chart-alt-2 text-danger me-2'></i> Top 5 Xarajatlar</span>
         </div>
-        
+
         <div class="d-flex align-items-center justify-content-between">
-            <div style="width: 60%; height: 280px; position: relative;">
-              <canvas id="chartExpenses"></canvas>
+          <div style="width: 60%; height: 280px; position: relative;">
+            <canvas id="chartExpenses"></canvas>
+          </div>
+          <div style="width: 40%; padding-left: 10px;" class="text-end">
+            <div class="mb-4">
+              <span class="text-muted small fw-bold d-block">TOP-5 JAMI:</span>
+              <span id="top5-sum-display" class="fw-bold text-dark fs-5">0</span>
             </div>
-            <div style="width: 40%; padding-left: 10px;" class="text-end">
-                <div class="mb-4">
-                    <span class="text-muted small fw-bold d-block">TOP-5 JAMI:</span>
-                    <span id="top5-sum-display" class="fw-bold text-dark fs-5">0</span>
-                </div>
-                <div>
-                    <span class="text-muted small fw-bold d-block">ULUSHI:</span>
-                    <span id="top5-percent-display" class="fw-bolder text-danger fs-2">0%</span>
-                </div>
-                <div class="mt-2">
-                    <small class="text-muted" style="font-size: 10px;">Jami xarajatga nisbatan</small>
-                </div>
+            <div>
+              <span class="text-muted small fw-bold d-block">ULUSHI:</span>
+              <span id="top5-percent-display" class="fw-bolder text-danger fs-2">0%</span>
             </div>
+            <div class="mt-2">
+              <small class="text-muted" style="font-size: 10px;">Jami xarajatga nisbatan</small>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -158,7 +249,7 @@
         <div class="chart-title">
           <span><i class='bx bx-bar-chart-square text-danger me-2'></i> Xarajatlar (kategoriya bo'yicha)</span>
         </div>
-        <div style="height: 400px;"> 
+        <div style="height: 400px;">
           <canvas id="chartAllExpenses"></canvas>
         </div>
       </div>
@@ -169,7 +260,7 @@
     <div class="col-lg-6">
       <div class="chart-box">
         <div class="chart-title">
-           <span><i class='bx bx-building-house text-primary me-2'></i> Firmalar Tushumi</span>
+          <span><i class='bx bx-building-house text-primary me-2'></i> Firmalar Tushumi</span>
         </div>
         <div style="height: 300px;">
           <canvas id="chartPoints"></canvas>
@@ -180,13 +271,14 @@
     <div class="col-lg-6">
       <div class="chart-box">
         <div class="chart-title">
-           <span><i class='bx bx-doughnut-chart text-warning me-2'></i> To'lov Turlari </span>
+          <span><i class='bx bx-doughnut-chart text-warning me-2'></i> To'lov Turlari </span>
         </div>
         <div class="d-flex align-items-center">
-            <div style="width: 50%; height: 260px; position: relative;">
-              <canvas id="chartPayments"></canvas>
-            </div>
-            <div id="pay-legend-container" style="width: 50%; padding-left: 20px; max-height: 260px; overflow-y: auto;"></div>
+          <div style="width: 50%; height: 260px; position: relative;">
+            <canvas id="chartPayments"></canvas>
+          </div>
+          <div id="pay-legend-container" style="width: 50%; padding-left: 20px; max-height: 260px; overflow-y: auto;">
+          </div>
         </div>
       </div>
     </div>
@@ -202,8 +294,9 @@
               <span class="text-muted small fw-bold me-2">Tanlangan davr uchun jami:</span>
               <span id="specific-point-total" class="text-primary fw-bold fs-6">0 so'm</span>
             </div>
-            <select id="chart-point-select" class="form-select form-select-sm border-primary text-primary fw-bold" style="width: 200px; cursor: pointer;" onchange="renderSpecificPointChart()">
-               <option>Yuklanmoqda...</option>
+            <select id="chart-point-select" class="form-select form-select-sm border-primary text-primary fw-bold"
+              style="width: 200px; cursor: pointer;" onchange="renderSpecificPointChart()">
+              <option>Yuklanmoqda...</option>
             </select>
           </div>
         </div>
@@ -216,19 +309,19 @@
 
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
     <div class="card-header bg-white py-3">
-       <h6 class="mb-0 fw-bold"><i class='bx bx-table'></i> So'nggi operatsiyalar</h6>
+      <h6 class="mb-0 fw-bold"><i class='bx bx-table'></i> So'nggi operatsiyalar</h6>
     </div>
     <div class="table-responsive" style="max-height: 400px;">
       <table class="table table-hover align-middle mb-0 text-center small">
         <thead class="table-light sticky-top">
-           <tr>
-             <th>Sana</th>
-             <th>Savdo nuqtasi</th>
-             <th>Kategoriya</th>
-             <th>To'lov</th>
-             <th>Kirim</th>
-             <th>Chiqim</th>
-           </tr>
+          <tr>
+            <th>Sana</th>
+            <th>Savdo nuqtasi</th>
+            <th>Kategoriya</th>
+            <th>To'lov</th>
+            <th>Kirim</th>
+            <th>Chiqim</th>
+          </tr>
         </thead>
         <tbody id="dash-table-body"></tbody>
       </table>

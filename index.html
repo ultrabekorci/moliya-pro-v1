@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="uz">
+
 <head>
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +10,10 @@
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
+    <script>
+        var PRELOADED_USERS = <?!= usersData ?>;
+    </script>
     <?!= include('css'); ?>
 
     <style>
@@ -21,15 +25,15 @@
             --border-color: #e2e8f0;
             --input-bg: #f8fafc;
             --shadow-color: rgba(0, 0, 0, 0.05);
-            --toggle-icon-color: #0A2558; 
+            --toggle-icon-color: #0A2558;
             --toggle-bg: #e2e8f0;
-            --hero-bg: #ffffff; 
+            --hero-bg: #ffffff;
         }
 
         body.dark-mode {
             --body-bg: #0f172a;
             --nav-bg: #1e293b;
-            --hero-bg: #1e293b; 
+            --hero-bg: #1e293b;
             --toggle-icon-color: #ffd700;
             --toggle-bg: rgba(255, 255, 255, 0.1);
         }
@@ -47,21 +51,23 @@
         body.dark-mode .sidebar-button .dashboard {
             color: #ffffff !important;
         }
-        .sidebar-button .dashboard { 
-            font-size: 24px; font-weight: 600; 
+
+        .sidebar-button .dashboard {
+            font-size: 24px;
+            font-weight: 600;
             color: var(--text-main);
             transition: color 0.3s;
         }
 
-        body.dark-mode .home-content h1, 
-        body.dark-mode .home-content h2, 
-        body.dark-mode .home-content h3, 
+        body.dark-mode .home-content h1,
+        body.dark-mode .home-content h2,
+        body.dark-mode .home-content h3,
         body.dark-mode .home-content h4,
         body.dark-mode .home-content span {
             color: #ffffff !important;
         }
 
-        body.dark-mode .card, 
+        body.dark-mode .card,
         body.dark-mode .bg-white,
         body.dark-mode .table {
             background-color: #ffffff !important;
@@ -69,51 +75,67 @@
             border-color: #e2e8f0 !important;
         }
 
-        body.dark-mode .card h1, body.dark-mode .card h2, body.dark-mode .card h3,
-        body.dark-mode .card h4, body.dark-mode .card h5, body.dark-mode .card p,
-        body.dark-mode .card span, body.dark-mode .card div, body.dark-mode .card i {
+        body.dark-mode .card h1,
+        body.dark-mode .card h2,
+        body.dark-mode .card h3,
+        body.dark-mode .card h4,
+        body.dark-mode .card h5,
+        body.dark-mode .card p,
+        body.dark-mode .card span,
+        body.dark-mode .card div,
+        body.dark-mode .card i {
             color: #1e293b !important;
         }
-        
+
         body.dark-mode .table thead th {
             background-color: #f8fafc !important;
             color: #1e293b !important;
         }
+
         body.dark-mode .table-hover tbody tr:hover {
-            background-color: rgba(0,0,0,0.05) !important;
+            background-color: rgba(0, 0, 0, 0.05) !important;
         }
 
         body.dark-mode .profile-dropdown-content {
-            background-color: #1e293b !important; 
+            background-color: #1e293b !important;
             border-color: #334155 !important;
             color: #fff !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
         }
+
         body.dark-mode .menu-header {
-            background-color: #0f172a !important; 
+            background-color: #0f172a !important;
             border-bottom-color: #334155 !important;
             color: #cbd5e1 !important;
         }
-        body.dark-mode .logout-btn { color: #e2e8f0 !important; }
-        body.dark-mode .logout-btn:hover {
-            background-color: rgba(255,255,255,0.05) !important;
-            color: #ff6b6b !important; 
+
+        body.dark-mode .logout-btn {
+            color: #e2e8f0 !important;
         }
+
+        body.dark-mode .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            color: #ff6b6b !important;
+        }
+
         body.dark-mode .profile-trigger {
             background: #1e293b !important;
             border-color: #334155 !important;
         }
+
         body.dark-mode .profile-trigger span,
         body.dark-mode .profile-trigger i:last-child {
-            color: #fff !important; 
+            color: #fff !important;
         }
 
-        body.dark-mode .bento-pro h4 { color: #ffffff !important; }
-        
-        body.dark-mode .bento-pro .text-muted {
-            color: #cbd5e1 !important; 
+        body.dark-mode .bento-pro h4 {
+            color: #ffffff !important;
         }
-        
+
+        body.dark-mode .bento-pro .text-muted {
+            color: #cbd5e1 !important;
+        }
+
         body.dark-mode .social-btn {
             background-color: #f8fafc !important;
             border-color: #334155 !important;
@@ -124,482 +146,843 @@
         }
 
         #login-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
             background: radial-gradient(circle at center, #1e3c72 0%, #2a5298 0%, #0A2558 80%);
-            z-index: 200000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
+            z-index: 200000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .app-big-title { font-size: 38px; font-weight: 800; color: #fff !important; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
-        .app-big-title i { font-size: 42px; color: #0dcaf0; }
-        
+
+        .app-big-title {
+            font-size: 38px;
+            font-weight: 800;
+            color: #fff !important;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-big-title i {
+            font-size: 42px;
+            color: #0dcaf0;
+        }
+
         .login-card {
-            background: #ffffff !important; width: 400px; padding: 45px 40px; border-radius: 24px;
-            text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: #ffffff !important;
+            width: 400px;
+            padding: 45px 40px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
+
         .logo-circle {
-            width: 80px; height: 80px; background: #0A2558 !important; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; 
-            color: #fff !important; font-size: 36px; box-shadow: 0 8px 20px rgba(10, 37, 88, 0.25);
+            width: 80px;
+            height: 80px;
+            background: #0A2558 !important;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            color: #fff !important;
+            font-size: 36px;
+            box-shadow: 0 8px 20px rgba(10, 37, 88, 0.25);
         }
-        .login-title { font-weight: 800; color: #0A2558 !important; margin-bottom: 8px; font-size: 26px; }
-        .login-subtitle { color: #6c757d !important; font-size: 14px; margin-bottom: 35px; font-weight: 600; }
 
-        .form-floating > .form-control {
-            border-radius: 12px; border: 2px solid #eef2f7 !important; background-color: #f8f9fa !important;
-            height: 55px; font-weight: 600; color: #0A2558 !important;
+        .login-title {
+            font-weight: 800;
+            color: #0A2558 !important;
+            margin-bottom: 8px;
+            font-size: 26px;
         }
-        .form-floating > .form-control:focus { background-color: #fff !important; border-color: #0A2558 !important; }
-        .form-floating label { padding-left: 15px; color: #6c757d !important; font-weight: 500; display: flex; align-items: center; }
-        .form-floating label i { margin-right: 8px; font-size: 18px; }
-        .form-floating > .form-control:focus ~ label { color: #0A2558 !important; }
 
-        .password-container { position: relative; }
-        .toggle-password { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #0A2558 !important; font-size: 22px; z-index: 10; }
+        .login-subtitle {
+            color: #6c757d !important;
+            font-size: 14px;
+            margin-bottom: 35px;
+            font-weight: 600;
+        }
+
+        .form-floating>.form-control {
+            border-radius: 12px;
+            border: 2px solid #eef2f7 !important;
+            background-color: #f8f9fa !important;
+            height: 55px;
+            font-weight: 600;
+            color: #0A2558 !important;
+        }
+
+        .form-floating>.form-control:focus {
+            background-color: #fff !important;
+            border-color: #0A2558 !important;
+        }
+
+        .form-floating label {
+            padding-left: 15px;
+            color: #6c757d !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-floating label i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        .form-floating>.form-control:focus~label {
+            color: #0A2558 !important;
+        }
+
+        .password-container {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #0A2558 !important;
+            font-size: 22px;
+            z-index: 10;
+        }
+
         .btn-login {
-            background: #0A2558 !important; border: none; height: 55px; font-size: 16px; font-weight: 800; 
-            border-radius: 12px; width: 100%; color: #fff !important; margin-top: 20px; text-transform: uppercase;
+            background: #0A2558 !important;
+            border: none;
+            height: 55px;
+            font-size: 16px;
+            font-weight: 800;
+            border-radius: 12px;
+            width: 100%;
+            color: #fff !important;
+            margin-top: 20px;
+            text-transform: uppercase;
         }
-        .btn-login:hover { background: #0d3480 !important; }
-        .login-footer { color: #6c757d !important; }
+
+        .btn-login:hover {
+            background: #0d3480 !important;
+        }
+
+        .login-footer {
+            color: #6c757d !important;
+        }
 
         nav {
-            position: sticky; top: 0; z-index: 1000; background: var(--nav-bg); padding: 0 20px; height: 80px; 
-            display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px var(--shadow-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--nav-bg);
+            padding: 0 20px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px var(--shadow-color);
             transition: background 0.3s;
         }
 
         .theme-toggle-btn {
-            font-size: 24px; cursor: pointer; margin-right: 20px; padding: 8px; border-radius: 50%; 
-            transition: 0.3s; color: var(--toggle-icon-color); background-color: var(--toggle-bg); border: 1px solid var(--border-color);
-            display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 20px;
+            padding: 8px;
+            border-radius: 50%;
+            transition: 0.3s;
+            color: var(--toggle-icon-color);
+            background-color: var(--toggle-bg);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
         }
-        .theme-toggle-btn:hover { transform: scale(1.1); }
 
-        .profile-trigger { display: flex; align-items: center; gap: 10px; padding: 6px 15px; background: var(--input-bg); border-radius: 30px; border: 1px solid var(--border-color); cursor: pointer; }
-        .profile-dropdown-content { display: none; position: fixed; top: 75px; right: 25px; background-color: #fff; min-width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid #e2e8f0; z-index: 9999; padding: 5px 0; }
-        .logout-btn { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #1e293b; font-weight: 500; width: 100%; background: none; border: none; text-align: left; }
-        .logout-btn:hover { background-color: #fff5f5; color: #dc3545; }
-        
-        .sidebar { background: #0A2558 !important; }
-        .home-section { background: var(--body-bg); transition: background 0.3s; }
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
+        }
 
-        .about-pro { max-width: 1100px; margin: 0 auto; }
+        .profile-trigger {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 15px;
+            background: var(--input-bg);
+            border-radius: 30px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .profile-dropdown-content {
+            display: none;
+            position: fixed;
+            top: 75px;
+            right: 25px;
+            background-color: #fff;
+            min-width: 220px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            z-index: 9999;
+            padding: 5px 0;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            color: #1e293b;
+            font-weight: 500;
+            width: 100%;
+            background: none;
+            border: none;
+            text-align: left;
+        }
+
+        .logout-btn:hover {
+            background-color: #fff5f5;
+            color: #dc3545;
+        }
+
+        .sidebar {
+            background: #0A2558 !important;
+        }
+
+        .home-section {
+            background: var(--body-bg);
+            transition: background 0.3s;
+        }
+
+        .about-pro {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
         .hero-card {
-            background: var(--hero-bg); border-radius: 30px; padding: 80px 40px; text-align: center;
-            box-shadow: 0 10px 40px var(--shadow-color); border: 1px solid var(--border-color);
-            margin-bottom: 40px; transition: background 0.3s, border 0.3s;
+            background: var(--hero-bg);
+            border-radius: 30px;
+            padding: 80px 40px;
+            text-align: center;
+            box-shadow: 0 10px 40px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            margin-bottom: 40px;
+            transition: background 0.3s, border 0.3s;
         }
-        .hero-badge { background: rgba(13, 110, 253, 0.1); color: #0d6efd; padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; display: inline-block; margin-bottom: 25px; }
-        
-        body.dark-mode .hero-title { color: #fff; }
-        body.dark-mode .hero-subtitle { color: #cbd5e1; }
-        body.dark-mode .bento-pro p { color: #cbd5e1; }
-        
-        body.dark-mode .about-list li { color: #fff; border-color: #334155; }
 
-        .hero-title { font-weight: 800; font-size: 42px; line-height: 1.2; color: #1e293b; margin-bottom: 20px; }
-        .hero-title span { background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero-subtitle { color: #64748b; font-size: 18px; max-width: 700px; margin: 0 auto; line-height: 1.6; }
+        .hero-badge {
+            background: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 25px;
+        }
 
-        body.dark-mode .bento-pro { background-color: #1e293b; border-color: #334155; }
+        body.dark-mode .hero-title {
+            color: #fff;
+        }
+
+        body.dark-mode .hero-subtitle {
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .bento-pro p {
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .about-list li {
+            color: #fff;
+            border-color: #334155;
+        }
+
+        .hero-title {
+            font-weight: 800;
+            font-size: 42px;
+            line-height: 1.2;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+
+        .hero-title span {
+            background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            color: #64748b;
+            font-size: 18px;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        body.dark-mode .bento-pro {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+
         .bento-pro {
-            background: #ffffff; padding: 30px; border-radius: 24px; height: 100%;
-            box-shadow: 0 5px 20px var(--shadow-color); border: 1px solid #e2e8f0;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 24px;
+            height: 100%;
+            box-shadow: 0 5px 20px var(--shadow-color);
+            border: 1px solid #e2e8f0;
             transition: transform 0.3s, background 0.3s;
         }
-        .bento-pro:hover { transform: translateY(-5px); }
-        .bento-pro h4 { color: #1e293b; font-weight: 700; margin-bottom: 15px; }
-        .bento-pro p { color: #64748b; line-height: 1.6; }
-        .bento-pro.gradient { background: linear-gradient(135deg, #ffffff, #f8fafc); }
-        body.dark-mode .bento-pro.gradient { background: linear-gradient(135deg, #1e293b, #0f172a); }
 
-        .icon-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 20px; }
-        .icon-box.blue { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
-        .icon-box.purple { background: rgba(111, 66, 193, 0.1); color: #6f42c1; }
-        .icon-box.green { background: rgba(25, 135, 84, 0.1); color: #198754; }
-        .icon-box.orange { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+        .bento-pro:hover {
+            transform: translateY(-5px);
+        }
 
-        .about-list li { padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-weight: 500; }
-        .tech-stack span { display: inline-block; background: var(--input-bg); padding: 8px 15px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 0 5px 5px 0; border: 1px solid var(--border-color); }
-        .social-btn { width: 40px; height: 40px; background: var(--input-bg); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.2s; }
-        .social-btn i { color: #1e293b; font-size: 20px; }
-        .social-btn:hover { background: var(--border-color); transform: scale(1.1); }
+        .bento-pro h4 {
+            color: #1e293b;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
 
-        .show-menu { display: block !important; }
-        .modal-backdrop { z-index: 1050; } .modal { z-index: 1060; }
+        .bento-pro p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .bento-pro.gradient {
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+        }
+
+        body.dark-mode .bento-pro.gradient {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+        }
+
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .icon-box.blue {
+            background: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+        }
+
+        .icon-box.purple {
+            background: rgba(111, 66, 193, 0.1);
+            color: #6f42c1;
+        }
+
+        .icon-box.green {
+            background: rgba(25, 135, 84, 0.1);
+            color: #198754;
+        }
+
+        .icon-box.orange {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .about-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .tech-stack span {
+            display: inline-block;
+            background: var(--input-bg);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin: 0 5px 5px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        body.dark-mode .tech-stack span {
+            background: #fff;
+            color: #1e293b !important;
+            border-color: #fff;
+        }
+
+        .social-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .social-btn i {
+            color: #1e293b;
+            font-size: 20px;
+        }
+
+        .social-btn:hover {
+            background: var(--border-color);
+            transform: scale(1.1);
+        }
+
+        .show-menu {
+            display: block !important;
+        }
+
+        .modal-backdrop {
+            z-index: 1050;
+        }
+
+        .modal {
+            z-index: 1060;
+        }
     </style>
 </head>
+
 <body>
 
-<div id="login-screen">
-    <div class="app-big-title"><i class='bx bx-doughnut-chart'></i> Moliya-Pro</div>
-    <form class="login-card" onsubmit="loginSystem(event)">
-        <div class="logo-circle"><i class='bx bx-bar-chart-alt-2'></i></div>
-        <h4 class="login-title">Xush Kelibsiz!</h4>
-        <p class="login-subtitle">Tizimga kirish uchun login va parolingizni kiriting!</p>
-        
-        <div class="form-floating mb-3">
-            <input type="text" id="loginUser" name="username" class="form-control" placeholder="Login" autocomplete="username" required>
-            <label for="loginUser"><i class='bx bx-user'></i> Login</label>
-        </div>
-        <div class="password-container mb-4">
-            <div class="form-floating">
-                <input type="password" id="loginPass" name="password" class="form-control" placeholder="Parol" autocomplete="current-password" required style="padding-right: 40px;">
-                <label for="loginPass"><i class='bx bx-lock-alt'></i> Parol</label>
-            </div>
-            <i class='bx bx-hide toggle-password' id="toggleBtn" onclick="togglePasswordVisibility()"></i>
-        </div>
-        <button type="submit" class="btn btn-login">KIRISH</button>
-        <p id="loginError" class="text-danger small mt-3 fw-bold"></p>
-        <div class="mt-4 text-muted small login-footer" style="font-size: 12px; font-weight: 600;">&copy; 2026 Moliya-Pro Tizimi</div>
-    </form>
-</div>
+    <div id="login-screen">
+        <div class="app-big-title"><i class='bx bx-doughnut-chart'></i> Moliya-Pro</div>
+        <form class="login-card" onsubmit="loginSystem(event)">
+            <div class="logo-circle"><i class='bx bx-bar-chart-alt-2'></i></div>
+            <h4 class="login-title">Xush Kelibsiz!</h4>
+            <p class="login-subtitle">Tizimga kirish uchun login va parolingizni kiriting!</p>
 
-<div id="main-app" style="display: none;">
-    <div class="sidebar">
-        <div class="logo-details">
-            <i class='bx bx-bar-chart-alt-2'></i>
-            <span class="logo_name">Moliya-Pro</span>
-        </div>
-        <ul class="nav-links">
-            <li id="menu-dashboard">
-                <a href="javascript:void(0);" class="nav-link active" onclick="switchTab('dashboard', this); document.getElementById('header-title').innerText = 'Dashboard'">
-                    <i class='bx bx-grid-alt'></i><span class="links_name">Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="javascript:void(0);" class="nav-link" id="link-list" onclick="switchTab('list', this); document.getElementById('header-title').innerText = 'Kirim / Chiqim'">
-                    <i class='bx bx-list-ul'></i><span class="links_name">Kirim / Chiqim</span>
-                </a>
-            </li>
-            <li style="margin-top: auto;">
-                <a href="javascript:void(0);" class="nav-link" onclick="switchTab('about', this); document.getElementById('header-title').innerText = 'About'">
-                    <i class='bx bx-info-circle'></i> <span class="links_name">About</span> </a>
-            </li>
-        </ul>
+            <div class="form-floating mb-3">
+                <input type="text" id="loginUser" name="username" class="form-control" placeholder="Login"
+                    autocomplete="username" required>
+                <label for="loginUser"><i class='bx bx-user'></i> Login</label>
+            </div>
+            <div class="password-container mb-4">
+                <div class="form-floating">
+                    <input type="password" id="loginPass" name="password" class="form-control" placeholder="Parol"
+                        autocomplete="current-password" required style="padding-right: 40px;">
+                    <label for="loginPass"><i class='bx bx-lock-alt'></i> Parol</label>
+                </div>
+                <i class='bx bx-hide toggle-password' id="toggleBtn" onclick="togglePasswordVisibility()"></i>
+            </div>
+            <button type="submit" class="btn btn-login">KIRISH</button>
+            <p id="loginError" class="text-danger small mt-3 fw-bold"></p>
+            <div class="mt-4 text-muted small login-footer" style="font-size: 12px; font-weight: 600;">&copy; 2026
+                Moliya-Pro Tizimi</div>
+        </form>
     </div>
 
-    <section class="home-section">
-        <nav>
-            <div class="sidebar-button">
-                <span class="dashboard" id="header-title">Dashboard</span>
+    <div id="main-app" style="display: none;">
+        <div class="sidebar">
+            <div class="logo-details">
+                <i class='bx bx-bar-chart-alt-2'></i>
+                <span class="logo_name">Moliya-Pro</span>
             </div>
-            <div class="d-flex align-items-center">
-                <i class='bx bx-moon theme-toggle-btn' id="theme-button" onclick="toggleTheme()" title="Rejimni o'zgartirish"></i>
+            <ul class="nav-links">
+                <li id="sidebar-dashboard">
+                    <a href="javascript:void(0);" class="nav-link active"
+                        onclick="switchTab('dashboard', this); document.getElementById('header-title').innerText = 'Dashboard'">
+                        <i class='bx bx-grid-alt'></i><span class="links_name">Dashboard</span>
+                    </a>
+                </li>
 
-                <div class="profile-menu">
-                    <div class="profile-trigger" onclick="toggleProfileMenu()">
-                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                            <i class='bx bx-user'></i>
-                        </div>
-                        <span class="fw-bold ms-2" style="color: var(--text-main);" id="user-display">User</span>
-                        <i class='bx bx-chevron-down text-muted ms-1'></i>
-                    </div>
-                </div>
-            </div>
-        </nav>
+                <li id="sidebar-list">
+                    <a href="javascript:void(0);" class="nav-link" id="link-list"
+                        onclick="switchTab('list', this); document.getElementById('header-title').innerText = 'Kirim / Chiqim'">
+                        <i class='bx bx-list-ul'></i><span class="links_name">Kirim / Chiqim</span>
+                    </a>
+                </li>
 
-        <div id="profileDropdown" class="profile-dropdown-content">
-            <button class="logout-btn" onclick="logoutSystem()">
-                <i class='bx bx-log-out'></i> Tizimdan chiqish
-            </button>
+                <li id="sidebar-settings">
+                    <a href="javascript:void(0);" class="nav-link"
+                        onclick="switchTab('settings', this); document.getElementById('header-title').innerText = 'Sozlamalar'">
+                        <i class='bx bx-cog'></i><span class="links_name">Sozlamalar</span>
+                    </a>
+                </li>
+
+                <li style="margin-top: auto;">
+                    <a href="javascript:void(0);" class="nav-link"
+                        onclick="switchTab('about', this); document.getElementById('header-title').innerText = 'About'">
+                        <i class='bx bx-info-circle'></i> <span class="links_name">About</span> </a>
+                </li>
+            </ul>
         </div>
 
-        <div class="home-content">
-            <div id="view-dashboard" class="container-fluid p-0">
-                <?!= include('dashboard'); ?>
+        <section class="home-section">
+            <nav>
+                <div class="sidebar-button">
+                    <span class="dashboard" id="header-title">Dashboard</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class='bx bx-moon theme-toggle-btn' id="theme-button" onclick="toggleTheme()"
+                        title="Rejimni o'zgartirish"></i>
+
+                    <div class="profile-menu">
+                        <div class="profile-trigger" onclick="toggleProfileMenu()">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 32px; height: 32px;">
+                                <i class='bx bx-user'></i>
+                            </div>
+                            <span class="fw-bold ms-2" style="color: var(--text-main);" id="user-display">User</span>
+                            <i class='bx bx-chevron-down text-muted ms-1'></i>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div id="profileDropdown" class="profile-dropdown-content">
+                <button class="logout-btn" onclick="logoutSystem()">
+                    <i class='bx bx-log-out'></i> Tizimdan chiqish
+                </button>
             </div>
 
-            <div id="view-list" style="display: none;"> <?!= include('list'); ?> </div>
+            <div class="home-content">
+                <div id="view-dashboard" class="container-fluid p-0">
+                    <?!= include('dashboard'); ?>
+                </div>
 
-            <div id="view-about" style="display: none;">
-                <div class="container-fluid p-4 p-lg-5 about-pro">
-                    <div class="hero-card">
-                        <div class="hero-badge"><i class='bx bx-rocket'></i> Moliya-Pro</div>
-                        <h1 class="hero-title">
-                            Oddiy jadvallar <br>
-                            <span>yetarli bo‘lmagan payt uchun</span>
-                        </h1>
-                        <p class="hero-subtitle">
-                            Kichik biznes va shaxsiy moliyani real vaqt rejimida boshqarish uchun yaratilgan zamonaviy tizim.
-                        </p>
-                    </div>
-                    <div class="row g-4">
-                        <div class="col-lg-7">
-                            <div class="bento-pro">
-                                <div class="icon-box blue"><i class='bx bx-bulb'></i></div>
-                                <h4>Muammo va Yechim</h4>
-                                <p>Excel jadvallari murakkablashadi, formulalar buziladi... <strong>Moliya-Pro</strong> buni osonlashtiradi.</p>
-                            </div>
+                <div id="view-list" style="display: none;">
+                    <?!= include('list'); ?>
+                </div>
+                <div id="view-settings" style="display: none;">
+                    <?!= include('settings'); ?>
+                </div>
+                <div id="view-about" style="display: none;">
+                    <div class="container-fluid p-4 p-lg-5 about-pro">
+                        <div class="hero-card">
+                            <div class="hero-badge"><i class='bx bx-rocket'></i> Moliya-Pro</div>
+                            <h1 class="hero-title">
+                                Oddiy jadvallar <br>
+                                <span>yetarli bo‘lmagan payt uchun</span>
+                            </h1>
+                            <p class="hero-subtitle">
+                                Kichik biznes va shaxsiy moliyani real vaqt rejimida boshqarish uchun yaratilgan
+                                zamonaviy tizim.
+                            </p>
                         </div>
-                        <div class="col-lg-5">
-                            <div class="bento-pro gradient">
-                                <div class="icon-box purple"><i class='bx bx-user-pin'></i></div>
-                                <h4>Kimlar Uchun?</h4>
-                                <ul class="about-list">
-                                    <li>Do‘kon egalari</li>
-                                    <li>Kichik bizneslar</li>
-                                    <li>Startaplar</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="bento-pro">
-                                <div class="icon-box green"><i class='bx bx-shield-quarter'></i></div>
-                                <h4>100% Xavfsizlik</h4>
-                                <p>Google serverlarida himoyalangan.</p>
-                            </div>
-                        </div>
-                        <div class="col-lg-8">
-                            <div class="bento-pro">
-                                <div class="icon-box orange"><i class='bx bx-code-alt'></i></div>
-                                <h4>Texnologiyalar</h4>
-                                <div class="tech-stack"><span>Apps Script</span><span>Bootstrap 5</span><span>Chart.js</span></div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="bento-pro developer-card d-flex align-items-center gap-4">
-                                <div class="position-relative">
-                                    <img src="https://github.com/ultrabekorci.png" class="rounded-circle shadow-sm border border-3 border-white" style="width: 100px; height: 100px; object-fit: cover;" alt="Ultrabekorci" onerror="this.src='https://via.placeholder.com/100'">
+                        <div class="row g-4">
+                            <div class="col-lg-7">
+                                <div class="bento-pro">
+                                    <div class="icon-box blue"><i class='bx bx-bulb'></i></div>
+                                    <h4>Muammo va Yechim</h4>
+                                    <p>Excel jadvallari murakkablashadi, formulalar buziladi...
+                                        <strong>Moliya-Pro</strong> buni osonlashtiradi.
+                                    </p>
                                 </div>
-                                <div class="w-100">
-                                    <div class="d-flex justify-content-between align-items-start flex-wrap">
-                                        <div>
-                                            <h4 class="mb-1 fw-bold">Ultrabekorci</h4>
-                                            <p class="text-primary small fw-bold mb-2">Founder & Developer</p>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="bento-pro gradient">
+                                    <div class="icon-box purple"><i class='bx bx-user-pin'></i></div>
+                                    <h4>Kimlar Uchun?</h4>
+                                    <ul class="about-list">
+                                        <li>Do‘kon egalari</li>
+                                        <li>Kichik bizneslar</li>
+                                        <li>Startaplar</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="bento-pro">
+                                    <div class="icon-box green"><i class='bx bx-shield-quarter'></i></div>
+                                    <h4>100% Xavfsizlik</h4>
+                                    <p>Google serverlarida himoyalangan.</p>
+                                </div>
+                            </div>
+                            <div class="col-lg-8">
+                                <div class="bento-pro">
+                                    <div class="icon-box orange"><i class='bx bx-code-alt'></i></div>
+                                    <h4>Texnologiyalar</h4>
+                                    <div class="tech-stack"><span>Apps Script</span><span>Bootstrap
+                                            5</span><span>Chart.js</span></div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="bento-pro developer-card d-flex align-items-center gap-4">
+                                    <div class="position-relative">
+                                        <img src="https://github.com/ultrabekorci.png"
+                                            class="rounded-circle shadow-sm border border-3 border-white"
+                                            style="width: 100px; height: 100px; object-fit: cover;" alt="Ultrabekorci"
+                                            onerror="this.src='https://via.placeholder.com/100'">
+                                    </div>
+                                    <div class="w-100">
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                            <div>
+                                                <h4 class="mb-1 fw-bold">Ultrabekorci</h4>
+                                                <p class="text-primary small fw-bold mb-2">Founder & Developer</p>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-3">“coding is life!”</p>
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <span class="text-muted small fw-bold text-uppercase me-2"
+                                                style="font-size: 11px;">follow Me:</span>
+
+                                            <a href="https://github.com/ultrabekorci" target="_blank"
+                                                class="social-btn"><i class='bx bxl-github'></i></a>
+                                            <a href="https://t.me/Ultrabekorci" target="_blank" class="social-btn"><i
+                                                    class='bx bxl-telegram text-primary'></i></a>
+                                            <a href="https://www.instagram.com/ultrabekorci/" target="_blank"
+                                                class="social-btn"><i class='bx bxl-instagram text-danger'></i></a>
+                                            <a href="https://x.com/ultrabekorci" target="_blank" class="social-btn"><i
+                                                    class='bx bxl-twitter text-info'></i></a>
                                         </div>
                                     </div>
-                                    <p class="text-muted small mb-3">“coding is life!”</p>
-                                    <div class="d-flex align-items-center flex-wrap gap-2">
-                                        <span class="text-muted small fw-bold text-uppercase me-2" style="font-size: 11px;">follow Me:</span>
-                                        
-                                        <a href="https://github.com/ultrabekorci" target="_blank" class="social-btn"><i class='bx bxl-github'></i></a>
-                                        <a href="https://t.me/Ultrabekorci" target="_blank" class="social-btn"><i class='bx bxl-telegram text-primary'></i></a>
-                                        <a href="https://www.instagram.com/_dostonbeck/" target="_blank" class="social-btn"><i class='bx bxl-instagram text-danger'></i></a>
-                                        <a href="https://x.com/doston_beck" target="_blank" class="social-btn"><i class='bx bxl-twitter text-info'></i></a>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
-</div>
-<script>
-  var PRELOADED_USERS = <?!= usersData ?>; 
-</script>
-<?!= include('js'); ?>
-<script>
-const SESSION_TIMEOUT = 15 * 60 * 1000;
-let sessionTimer;
+        </section>
+    </div>
+    <script>
+        var PRELOADED_USERS = <?!= usersData ?>; 
+    </script>
+    <?!= include('js'); ?>
+    <script>
+        const SESSION_TIMEOUT = 15 * 60 * 1000;
+        let sessionTimer;
 
-function initSession() {
-    const savedUser = sessionStorage.getItem('moliya_user');
-    const savedRole = sessionStorage.getItem('moliya_role');
-    const lastActivity = sessionStorage.getItem('moliya_last_activity');
-    
-    if (savedUser && savedRole && lastActivity) {
-        const timePassed = Date.now() - parseInt(lastActivity);
-        
-        if (timePassed < SESSION_TIMEOUT) {
-            USER_ROLE = savedRole;
-            if(document.getElementById('user-display')) {
-                document.getElementById('user-display').innerText = savedUser.charAt(0).toUpperCase() + savedUser.slice(1);
+        function initSession() {
+            const savedUser = sessionStorage.getItem('moliya_user');
+            const savedRole = sessionStorage.getItem('moliya_role');
+            const lastActivity = sessionStorage.getItem('moliya_last_activity');
+
+            if (savedUser && savedRole && lastActivity) {
+                const timePassed = Date.now() - parseInt(lastActivity);
+
+                if (timePassed < SESSION_TIMEOUT) {
+                    USER_ROLE = savedRole;
+                    if (document.getElementById('user-display')) {
+                        document.getElementById('user-display').innerText = savedUser.charAt(0).toUpperCase() + savedUser.slice(1);
+                    }
+
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('main-app').style.display = 'block';
+
+                    let savedPerms = JSON.parse(sessionStorage.getItem('moliya_perms') || '{}');
+                    applyPermissions(savedPerms);
+                    loadDashboard();
+                    // ...
+                    loadDashboard();
+                    loadDropdowns();
+                    refreshList();
+                    loadBalances();
+
+                    startSessionTimer();
+                    return true;
+                } else {
+                    clearSession();
+                }
             }
-            
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            
-            applyRolePermissions();
-            loadDashboard();
-            loadDropdowns();
-            refreshList();
-            loadBalances();
-            
+            return false;
+        }
+
+        function startSessionTimer() {
+            if (sessionTimer) clearTimeout(sessionTimer);
+            updateLastActivity();
+            sessionTimer = setTimeout(function () {
+                Swal.fire({
+                    icon: 'warning',
+                    iconColor: '#d33',
+                    title: 'Sessiya vaqti tugadi!',
+                    text: '15 daqiqa harakatsizlik. Iltimos, tizimga qaytadan kiring!',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#d33'
+                }).then(() => {
+                    logoutSystem();
+                });
+            }, SESSION_TIMEOUT);
+        }
+
+        function updateLastActivity() {
+            sessionStorage.setItem('moliya_last_activity', Date.now().toString());
+        }
+
+        function clearSession() {
+            sessionStorage.removeItem('moliya_user');
+            sessionStorage.removeItem('moliya_role');
+            sessionStorage.removeItem('moliya_last_activity');
+            if (sessionTimer) clearTimeout(sessionTimer);
+        }
+
+        function resetSessionTimer() {
             startSessionTimer();
-            return true;
-        } else {
-            clearSession();
         }
-    }
-    return false;
-}
 
-function startSessionTimer() {
-    if (sessionTimer) clearTimeout(sessionTimer);
-    updateLastActivity();
-    sessionTimer = setTimeout(function() {
-        Swal.fire({
-            icon: 'warning',
-            iconColor: '#d33',
-            title: 'Sessiya vaqti tugadi!',
-            text: '15 daqiqa harakatsizlik. Iltimos, tizimga qaytadan kiring!',
-            confirmButtonText: 'OK' ,
-            confirmButtonColor: '#d33'
-        }).then(() => {
-            logoutSystem();
-        });
-    }, SESSION_TIMEOUT);
-}
+        function loginSystem(e) {
+            if (e) e.preventDefault();
 
-function updateLastActivity() {
-    sessionStorage.setItem('moliya_last_activity', Date.now().toString());
-}
+            var u = document.getElementById('loginUser').value.toLowerCase().trim();
+            var p = document.getElementById('loginPass').value.trim();
+            var err = document.getElementById('loginError');
 
-function clearSession() {
-    sessionStorage.removeItem('moliya_user');
-    sessionStorage.removeItem('moliya_role');
-    sessionStorage.removeItem('moliya_last_activity');
-    if (sessionTimer) clearTimeout(sessionTimer);
-}
+            var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p);
 
-function resetSessionTimer() {
-    startSessionTimer();
-}
+            if (foundUser) {
 
-function loginSystem(e) {
-    if(e) e.preventDefault();
-    
-    var u = document.getElementById('loginUser').value.toLowerCase().trim();
-    var p = document.getElementById('loginPass').value.trim();
-    var err = document.getElementById('loginError');
-    
-    var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p);
-    
-    if (foundUser) {
-        USER_ROLE = foundUser.r;
-        
-        sessionStorage.setItem('moliya_user', u);
-        sessionStorage.setItem('moliya_role', foundUser.r);
-        sessionStorage.setItem('moliya_last_activity', Date.now().toString());
-        
-        if(document.getElementById('user-display')) {
-            document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1);
-        }
-        
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        
-        applyRolePermissions();
-        loadDashboard();
-        loadDropdowns();
-        refreshList();
-        loadBalances();
-        
-        startSessionTimer();
-    } else {
-        err.innerText = "Login yoki parol noto'g'ri!";
-    }
-}
+                if (foundUser.s !== 'active') {
+                    err.innerText = "Sizning profilingiz bloklangan! Admin bilan bog'laning.";
+                    return;
+                }
 
-function logoutSystem() {
-    USER_ROLE = "";
-    ALL_DATA = [];
-    DASH_DATA = [];
-    
-    clearSession();
-    
-    document.getElementById('main-app').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-}
+                USER_ROLE = foundUser.r;
 
-window.addEventListener('load', function() {
-    const sessionActive = initSession();
-    
-    if (!sessionActive) {
-        google.script.run.withSuccessHandler(function(users) { 
-            LOCAL_USERS_DB = users; 
-        }).getAllUsers();
-    }
-    
-    loadBalances();
-    loadDropdowns();
-    
-    try { 
-        document.querySelectorAll('.pay-input').forEach(inp => { 
-            inp.addEventListener('keyup', calcBatchTotal); 
-        }); 
-    } catch(e) { 
-        console.error(e); 
-    }
-    
-    var modalEl = document.getElementById('transModal'); 
-    if(modalEl) document.body.appendChild(modalEl);
-});
+                sessionStorage.setItem('moliya_user', u);
+                sessionStorage.setItem('moliya_role', foundUser.r);
+                sessionStorage.setItem('moliya_perms', JSON.stringify(foundUser.perms || {}));
+                sessionStorage.setItem('moliya_last_activity', Date.now().toString());
 
-document.addEventListener('mousemove', resetSessionTimer);
-document.addEventListener('keypress', resetSessionTimer);
-document.addEventListener('click', resetSessionTimer);
-document.addEventListener('scroll', resetSessionTimer);
-document.addEventListener('touchstart', resetSessionTimer);
+                if (document.getElementById('user-display')) {
+                    document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1);
+                }
 
-function togglePasswordVisibility() {
-    const input = document.getElementById("loginPass");
-    const icon = document.getElementById("toggleBtn");
-    if (input.type === "password") {
-        input.type = "text"; icon.classList.replace("bx-hide", "bx-show");
-    } else {
-        input.type = "password"; icon.classList.replace("bx-show", "bx-hide");
-    }
-}
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
 
-const themeButton = document.getElementById('theme-button');
-const darkTheme = 'dark-mode';
-const iconMoon = 'bx-moon'; 
-const iconSun = 'bx-sun';    
 
-const selectedTheme = localStorage.getItem('selected-theme');
-const getCurrentTheme = () => document.body.classList.contains(darkTheme) ? 'dark' : 'light';
-const getCurrentIcon = () => themeButton.classList.contains(iconSun) ? 'bx-sun' : 'bx-moon';
+                let perms = foundUser.perms || {};
+                if (USER_ROLE === 'Admin') {
+                    perms = { admin: true, ...perms };
+                }
 
-if (selectedTheme === 'dark') {
-    document.body.classList.add(darkTheme);
-    themeButton.classList.remove(iconMoon);
-    themeButton.classList.add(iconSun);
-} else {
-    document.body.classList.remove(darkTheme);
-    themeButton.classList.remove(iconSun);
-    themeButton.classList.add(iconMoon);
-}
+                applyPermissions(perms);
 
-function toggleTheme() {
-    document.body.classList.toggle(darkTheme);
-    
-    if (document.body.classList.contains(darkTheme)) {
-        themeButton.classList.remove(iconMoon);
-        themeButton.classList.add(iconSun);
-    } else {
-        themeButton.classList.remove(iconSun);
-        themeButton.classList.add(iconMoon);
-    }
-    localStorage.setItem('selected-theme', getCurrentTheme());
-    localStorage.setItem('selected-icon', getCurrentIcon());
-    
-    if(document.getElementById('view-dashboard').style.display !== 'none') {
-        setTimeout(function() {
-            applyDashFilters();
-        }, 100);
-    }
-}
+                loadDashboard();
+                loadDropdowns();
+                refreshList();
+                loadBalances();
 
-function toggleProfileMenu() {
-    var menu = document.getElementById("profileDropdown");
-    menu.classList.toggle("show-menu");
-}
-
-window.onclick = function(event) {
-    if (!event.target.closest('.profile-trigger')) {
-        var dropdowns = document.getElementsByClassName("profile-dropdown-content");
-        for (var i = 0; i < dropdowns.length; i++) {
-            var openDropdown = dropdowns[i];
-            if (openDropdown.classList.contains('show-menu')) {
-                openDropdown.classList.remove('show-menu');
+                startSessionTimer();
+            } else {
+                err.innerText = "Login yoki parol noto'g'ri!";
             }
         }
-    }
-}
-</script>
+
+        function logoutSystem() {
+            USER_ROLE = "";
+            ALL_DATA = [];
+            DASH_DATA = [];
+
+            clearSession();
+
+            document.getElementById('main-app').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        window.addEventListener('load', function () {
+            const sessionActive = initSession();
+
+            if (!sessionActive) {
+                google.script.run.withSuccessHandler(function (users) {
+                    LOCAL_USERS_DB = users;
+                }).getAllUsers();
+            }
+
+            loadBalances();
+            loadDropdowns();
+
+            try {
+                document.querySelectorAll('.pay-input').forEach(inp => {
+                    inp.addEventListener('keyup', calcBatchTotal);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+
+            var modalEl = document.getElementById('transModal');
+            if (modalEl) document.body.appendChild(modalEl);
+        });
+
+        document.addEventListener('mousemove', resetSessionTimer);
+        document.addEventListener('keypress', resetSessionTimer);
+        document.addEventListener('click', resetSessionTimer);
+        document.addEventListener('scroll', resetSessionTimer);
+        document.addEventListener('touchstart', resetSessionTimer);
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById("loginPass");
+            const icon = document.getElementById("toggleBtn");
+            if (input.type === "password") {
+                input.type = "text"; icon.classList.replace("bx-hide", "bx-show");
+            } else {
+                input.type = "password"; icon.classList.replace("bx-show", "bx-hide");
+            }
+        }
+
+        const themeButton = document.getElementById('theme-button');
+        const darkTheme = 'dark-mode';
+        const iconMoon = 'bx-moon';
+        const iconSun = 'bx-sun';
+
+        const selectedTheme = localStorage.getItem('selected-theme');
+        const getCurrentTheme = () => document.body.classList.contains(darkTheme) ? 'dark' : 'light';
+        const getCurrentIcon = () => themeButton.classList.contains(iconSun) ? 'bx-sun' : 'bx-moon';
+
+        if (selectedTheme === 'dark') {
+            document.body.classList.add(darkTheme);
+            themeButton.classList.remove(iconMoon);
+            themeButton.classList.add(iconSun);
+        } else {
+            document.body.classList.remove(darkTheme);
+            themeButton.classList.remove(iconSun);
+            themeButton.classList.add(iconMoon);
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle(darkTheme);
+
+            if (document.body.classList.contains(darkTheme)) {
+                themeButton.classList.remove(iconMoon);
+                themeButton.classList.add(iconSun);
+            } else {
+                themeButton.classList.remove(iconSun);
+                themeButton.classList.add(iconMoon);
+            }
+            localStorage.setItem('selected-theme', getCurrentTheme());
+            localStorage.setItem('selected-icon', getCurrentIcon());
+
+            if (document.getElementById('view-dashboard').style.display !== 'none') {
+                setTimeout(function () {
+                    applyDashFilters();
+                }, 100);
+            }
+        }
+
+        function toggleProfileMenu() {
+            var menu = document.getElementById("profileDropdown");
+            menu.classList.toggle("show-menu");
+        }
+
+        window.onclick = function (event) {
+            if (!event.target.closest('.profile-trigger')) {
+                var dropdowns = document.getElementsByClassName("profile-dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show-menu')) {
+                        openDropdown.classList.remove('show-menu');
+                    }
+                }
+            }
+        }
+    </script>
 </body>
+
 </html>

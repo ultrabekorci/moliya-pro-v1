@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        .settings-main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+            background: var(--body-bg);
+        }
+
+        .settings-sidebar {
+            width: 280px;
+            background: #ffffff;
+            border-right: 1px solid var(--border-color);
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        body.dark-mode .settings-sidebar {
+            background: #1e293b;
+            border-right-color: #334155;
+        }
+
+        .settings-sidebar-header {
+            padding: 0 20px 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+
+        .settings-sidebar-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        body.dark-mode .settings-sidebar-header h3 {
+            color: #fff;
+        }
+
+        .settings-sidebar-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 5px 0 0 0;
+        }
+
+        .settings-nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .settings-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            color: var(--text-main);
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .settings-nav-link:hover {
+            background: rgba(10, 37, 88, 0.05);
+            color: #0A2558;
+        }
+
+        .settings-nav-link.active {
+            background: rgba(10, 37, 88, 0.08);
+            color: #0A2558;
+            border-left-color: #0A2558;
+            font-weight: 600;
+        }
+
+        .settings-content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: var(--body-bg);
+        }
+
+        .general-sub-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0;
+            flex-wrap: wrap;
+        }
+
+        .general-sub-tab {
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .general-sub-tab:hover {
+            color: #0A2558;
+            background: rgba(10, 37, 88, 0.05);
+        }
+
+        .general-sub-tab.active {
+            color: #0A2558;
+            border-bottom-color: #0A2558;
+        }
+
+        .settings-content-section {
+            display: none;
+        }
+
+        .settings-content-section.active {
+            display: block;
+        }
+
+        .general-content-section {
+            display: none;
+        }
+
+        .general-content-section.active {
+            display: block;
+        }
+
+        .settings-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        body.dark-mode .settings-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .settings-section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            flex: 1;
+        }
+
+        .settings-label h5 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 5px;
+        }
+
+        .settings-label p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .btn-add-item {
+            background: #0A2558;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-add-item:hover {
+            background: #0d3480;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(10, 37, 88, 0.3);
+        }
+
+        .data-table {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        body.dark-mode .data-table th {
+            background: #0f172a;
+            color: #fff;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .data-table tr:hover {
+            background: #f8fafc;
+        }
+
+        body.dark-mode .data-table tr:hover {
+            background: #0f172a;
+        }
+
+        .btn-table-action {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 5px;
+        }
+
+        .btn-table-action i {
+            font-size: 18px;
+        }
+
+        .btn-edit {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .btn-edit:hover {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .btn-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .btn-warning:hover {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .btn-success:hover {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .btn-delete {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .btn-delete:hover {
+            background: #c62828;
+            color: #fff;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .content-header {
+            margin-bottom: 30px;
+        }
+
+        .content-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 5px;
+        }
+
+        .content-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .badge-role {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-admin,
+        body.dark-mode .settings-main-container .badge-admin {
+            background: #e7f5ff;
+            color: #0c5da5 !important;
+        }
+
+        .badge-operator,
+        body.dark-mode .settings-main-container .badge-operator {
+            background: #fff3e0;
+            color: #e65100 !important;
+        }
+
+        /* Dark-modeda Sozlamalar tablari ko'rinishi uchun */
+        body.dark-mode .general-sub-tab {
+            color: #cbd5e1;
+            /* Och kulrang matn */
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-mode .general-sub-tab:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-mode .general-sub-tab.active {
+            color: #3b82f6;
+            /* Faol tab uchun ko'k rang */
+            border-bottom-color: #3b82f6;
+        }
+
+        body.dark-mode .general-sub-nav {
+            border-bottom-color: #334155;
+        }
+
+        /* --- SOZLAMALAR UCHUN QO'SHIMCHA DARK MODE --- */
+
+        /* 1. Chap menyu yozuvlari */
+        body.dark-mode .settings-nav-link {
+            color: #cbd5e1;
+            /* Oddiy holatda och kulrang */
+        }
+
+        body.dark-mode .settings-nav-link:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-mode .settings-nav-link.active {
+            color: #60a5fa;
+            /* Tanlanganda och ko'k */
+            background: rgba(59, 130, 246, 0.15);
+            border-left-color: #60a5fa;
+        }
+
+        /* 2. Sarlavhalar va Katta yozuvlar */
+        body.dark-mode .settings-section-title,
+        body.dark-mode .settings-label h5,
+        body.dark-mode .content-header h2,
+        body.dark-mode .settings-sidebar-header h3 {
+            color: #fff !important;
+        }
+
+        /* 3. Kichik tavsif yozuvlari (kulrangroq) */
+        body.dark-mode .settings-label p,
+        body.dark-mode .content-header p,
+        body.dark-mode .settings-sidebar-header p {
+            color: #94a3b8 !important;
+        }
+
+        /* 4. Jadval ichidagi yozuvlar */
+        body.dark-mode .data-table td {
+            color: #e2e8f0 !important;
+            /* Jadval matni oqish */
+            border-bottom-color: #334155;
+            /* Chiziqlar bilinib turishi uchun */
+        }
+
+        /* 5. Sozlamalar qatorlari orasi chizig'i */
+        body.dark-mode .settings-row {
+            border-bottom-color: #334155;
+        }
+
+        /* Dark Mode uchun "Yangi qo'shish" tugmalari */
+        body.dark-mode .btn-add-item {
+            background: #10b981;
+            /* Yorqin yashil rang */
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+        }
+
+        body.dark-mode .btn-add-item:hover {
+            background: #059669;
+            /* Hover bo'lganda to'qroq yashil */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* --- SOZLAMALAR MODALLARI UCHUN DARK MODE --- */
+        /* Faqat #dataItemModal va #userModal ga ta'sir qiladi */
+
+        body.dark-mode #dataItemModal .modal-content,
+        body.dark-mode #userModal .modal-content {
+            background-color: #1e293b;
+            /* To'q fon */
+            color: #fff;
+            /* Oq yozuv */
+            border: 1px solid #334155;
+        }
+
+        body.dark-mode #dataItemModal .modal-header,
+        body.dark-mode #userModal .modal-header,
+        body.dark-mode #dataItemModal .modal-footer,
+        body.dark-mode #userModal .modal-footer {
+            border-color: #334155;
+            /* Chiziqlar rangi */
+        }
+
+        /* Yopish tugmasini (x) oq rangga o'tkazish */
+        body.dark-mode #dataItemModal .btn-close,
+        body.dark-mode #userModal .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* Inputlar va Selectlar dizayni */
+        body.dark-mode #dataItemModal .form-control,
+        body.dark-mode #userModal .form-control,
+        body.dark-mode #userModal .form-select {
+            background-color: #0f172a;
+            /* Ichki to'q fon */
+            border-color: #334155;
+            color: #fff;
+        }
+
+        body.dark-mode #dataItemModal .form-control::placeholder,
+        body.dark-mode #userModal .form-control::placeholder {
+            color: #94a3b8;
+        }
+
+        body.dark-mode #dataItemModal .form-control:focus,
+        body.dark-mode #userModal .form-control:focus,
+        body.dark-mode #userModal .form-select:focus {
+            background-color: #0f172a;
+            border-color: #3b82f6;
+            /* Fokus bo'lganda ko'k hoshiya */
+            color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        }
+
+        /* Select ichidagi optionlar */
+        body.dark-mode #userModal .form-select option {
+            background-color: #0f172a;
+            color: #fff;
+        }
+
+        /* --- MODALLAR DARK MODEDA HAM OQ QOLSIN --- */
+        body.dark-mode #dataItemModal .modal-content,
+        body.dark-mode #userModal .modal-content {
+            background-color: #ffffff !important;
+            /* Orqa fon OQ */
+            color: #000000 !important;
+            /* Yozuvlar QORA */
+            border: 1px solid #dee2e6 !important;
+        }
+
+        /* Sarlavha va chiziqlar */
+        body.dark-mode #dataItemModal .modal-header,
+        body.dark-mode #userModal .modal-header,
+        body.dark-mode #dataItemModal .modal-footer,
+        body.dark-mode #userModal .modal-footer {
+            border-color: #dee2e6 !important;
+        }
+
+        body.dark-mode #dataItemModal .modal-title,
+        body.dark-mode #userModal .modal-title {
+            color: #000000 !important;
+        }
+
+        /* Yopish (X) tugmasi ko'rinishi uchun */
+        body.dark-mode #dataItemModal .btn-close,
+        body.dark-mode #userModal .btn-close {
+            filter: none !important;
+            /* Oqartirmaslik */
+        }
+
+        /* Input va Selectlar (Oq fon, qora yozuv) */
+        body.dark-mode #dataItemModal .form-control,
+        body.dark-mode #userModal .form-control,
+        body.dark-mode #userModal .form-select {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #ced4da !important;
+        }
+
+        body.dark-mode #dataItemModal .form-label,
+        body.dark-mode #userModal .form-label {
+            color: #000000 !important;
+        }
+
+        /* Select ichidagi variantlar */
+        body.dark-mode #userModal .form-select option {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+
+        /* Input fokus bo'lganda */
+        body.dark-mode #dataItemModal .form-control:focus,
+        body.dark-mode #userModal .form-control:focus {
+            background-color: #fff !important;
+            color: #000 !important;
+            border-color: #86b7fe !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+        }
+
+        /* --- HUQUQLAR (PERMISSIONS) --- */
+        .perm-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        body.dark-mode .perm-section {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        .perm-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            display: block;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        body.dark-mode .perm-title {
+            color: #fff;
+            border-color: #334155;
+        }
+
+        .perm-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .form-check input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .form-check label {
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-main);
+        }
+
+        body.dark-mode .form-check label {
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="settings-main-container">
+        <div class="settings-sidebar">
+            <div class="settings-sidebar-header">
+                <h3><i class='bx bx-cog'></i> Sozlamalar</h3>
+            </div>
+
+            <ul class="settings-nav-list">
+                <li class="settings-nav-item" id="set-menu-general">
+                    <a class="settings-nav-link active" onclick="switchSettingsSection('general')">
+                        <i class='bx bx-data'></i>
+                        <span>Umumiy</span>
+                    </a>
+                </li>
+
+                <li class="settings-nav-item" id="set-menu-users">
+                    <a class="settings-nav-link" onclick="switchSettingsSection('users')">
+                        <i class='bx bx-user-circle'></i>
+                        <span>Xodimlar</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+
+        <div class="settings-content-area">
+            <div id="settings-section-general" class="settings-content-section active">
+                <div class="content-header">
+                    <h2>Umumiy sozlamalar</h2>
+                </div>
+
+                <div class="general-sub-nav">
+                    <button class="general-sub-tab active" onclick="switchGeneralTab('firms')">
+                        Firmalar
+                    </button>
+                    <button class="general-sub-tab" onclick="switchGeneralTab('points')">
+                        Sotish nuqtalari
+                    </button>
+                    <button class="general-sub-tab" onclick="switchGeneralTab('payments')">
+                        To'lov Turlari
+                    </button>
+                    <button class="general-sub-tab" onclick="switchGeneralTab('categories')">
+                        Kategoriyalar
+                    </button>
+                </div>
+
+                <div id="general-content-firms" class="general-content-section active">
+                    <div class="settings-card">
+                        <div class="settings-section-title">
+                            <i class='bx bx-buildings'></i> Firmalar
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <h5>Firmalarni boshqarish</h5>
+                            </div>
+                            <button class="btn-add-item" onclick="showDataModal('firm')">
+                                <i class='bx bx-plus'></i> Yangi firma
+                            </button>
+                        </div>
+                        <div class="data-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Firma nomi</th>
+                                        <th>Holat</th>
+                                        <th>Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="firms-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="general-content-points" class="general-content-section">
+                    <div class="settings-card">
+                        <div class="settings-section-title">
+                            <i class='bx bx-store'></i> Sotish nuqtalari
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <h5>Savdo nuqtalarini boshqarish</h5>
+                            </div>
+                            <button class="btn-add-item" onclick="showDataModal('point')">
+                                <i class='bx bx-plus'></i> Yangi savdo nuqtasi
+                            </button>
+                        </div>
+                        <div class="data-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Savdo nuqtasi nomi</th>
+                                        <th>Holat</th>
+                                        <th>Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="points-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="general-content-payments" class="general-content-section">
+                    <div class="settings-card">
+                        <div class="settings-section-title">
+                            <i class='bx bx-purchase-tag'></i> To'lov turlari
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <h5>To'lov turlarini boshqarish</h5>
+                            </div>
+                            <button class="btn-add-item" onclick="showDataModal('payment')">
+                                <i class='bx bx-plus'></i> Yangi to'lov turi
+                            </button>
+                        </div>
+                        <div class="data-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>To'lov turi</th>
+                                        <th>Holat</th>
+                                        <th>Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payments-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="general-content-categories" class="general-content-section">
+                    <div class="settings-card">
+                        <div class="settings-section-title">
+                            <i class='bx bx-category'></i> Kategoriyalar
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <h5>Xarajat kategoriyalarini boshqarish</h5>
+                            </div>
+                            <button class="btn-add-item" onclick="showDataModal('category')">
+                                <i class='bx bx-plus'></i> Yangi kategoriya
+                            </button>
+                        </div>
+                        <div class="data-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Kategoriya</th>
+                                        <th>Holat</th>
+                                        <th>Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="categories-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings-section-users" class="settings-content-section">
+                <div class="content-header">
+                    <h2>Xodimlar</h2>
+                    <p>Foydalanuvchilarni boshqaring</p>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <h5>Foydalanuvchilar</h5>
+                        </div>
+                        <button class="btn-add-item" onclick="showUserModal()">
+                            <i class='bx bx-user-plus'></i> Yangi xodim
+                        </button>
+                    </div>
+                    <div class="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Login</th>
+                                    <th>Parol</th>
+                                    <th>Rol</th>
+                                    <th>Holat</th>
+                                    <th>Amallar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="dataItemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dataItemModalTitle">Yangi element</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="data-item-type">
+                    <input type="hidden" id="data-item-index">
+                    <div class="mb-3">
+                        <label for="data-item-value" class="form-label fw-bold">Nom</label>
+                        <input type="text" class="form-control" id="data-item-value" placeholder="Nom kiriting"
+                            required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDataItem()">Saqlash</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalTitle">Yangi xodim</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="user-index">
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Login</label>
+                            <input type="text" class="form-control" id="user-login" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Parol</label>
+                            <input type="text" class="form-control" id="user-password" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Lavozim (Rol)</label>
+                        <select class="form-select" id="user-role">
+                            <option value="Operator">Operator</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                        <small class="text-muted" style="font-size: 11px;">"Admin" tanlansa barcha huquqlar avtomatik
+                            beriladi.</small>
+                    </div>
+
+                    <div id="permissions-container" style="max-height: 300px; overflow-y: auto;">
+
+                        <div class="perm-section">
+                            <span class="perm-title">📊 Dashboard</span>
+                            <div class="perm-grid">
+                                <div class="form-check"><input type="checkbox" id="p-dash-view"><label
+                                        for="p-dash-view">Ko'rish (View)</label></div>
+                            </div>
+                        </div>
+
+                        <div class="perm-section">
+                            <span class="perm-title">💰 Kirim (Daromad)</span>
+                            <div class="perm-grid">
+                                <div class="form-check"><input type="checkbox" id="p-kirim-view"><label
+                                        for="p-kirim-view">Ko'rish (Tab)</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-kirim-add"><label
+                                        for="p-kirim-add">Qo'shish</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-kirim-edit"><label
+                                        for="p-kirim-edit">Tahrirlash</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-kirim-del"><label
+                                        for="p-kirim-del">O'chirish</label></div>
+                            </div>
+                        </div>
+
+                        <div class="perm-section">
+                            <span class="perm-title">💸 Chiqim (Xarajat)</span>
+                            <div class="perm-grid">
+                                <div class="form-check"><input type="checkbox" id="p-chiqim-view"><label
+                                        for="p-chiqim-view">Ko'rish (Tab)</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-chiqim-add"><label
+                                        for="p-chiqim-add">Qo'shish</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-chiqim-edit"><label
+                                        for="p-chiqim-edit">Tahrirlash</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-chiqim-del"><label
+                                        for="p-chiqim-del">O'chirish</label></div>
+                            </div>
+                        </div>
+
+                        <div class="perm-section">
+                            <span class="perm-title">🔄 O'tkazma</span>
+                            <div class="perm-grid">
+                                <div class="form-check"><input type="checkbox" id="p-trans-view"><label
+                                        for="p-trans-view">Ko'rish (Tab)</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-trans-add"><label
+                                        for="p-trans-add">Qo'shish</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-trans-edit"><label
+                                        for="p-trans-edit">Tahrirlash</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-trans-del"><label
+                                        for="p-trans-del">O'chirish</label></div>
+                            </div>
+                        </div>
+
+                        <div class="perm-section">
+                            <span class="perm-title">⚙️ Umumiy Sozlamalar</span>
+                            <div class="perm-grid">
+                                <div class="form-check"><input type="checkbox" id="p-set-gen-view"><label
+                                        for="p-set-gen-view">Ko'rish (View)</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-set-gen-add"><label
+                                        for="p-set-gen-add">Qo'shish</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-set-gen-edit"><label
+                                        for="p-set-gen-edit">Tahrirlash</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-set-gen-del"><label
+                                        for="p-set-gen-del">O'chirish</label></div>
+                            </div>
+                        </div>
+
+                        <div class="perm-section">
+                            <span class="perm-title">👥 Xodimlar</span>
+                            <div class="perm-grid">
+                                <div class="form-check"><input type="checkbox" id="p-set-user-view"><label
+                                        for="p-set-user-view">Ko'rish (View)</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-set-user-add"><label
+                                        for="p-set-user-add">Qo'shish</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-set-user-edit"><label
+                                        for="p-set-user-edit">Tahrirlash</label></div>
+                                <div class="form-check"><input type="checkbox" id="p-set-user-del"><label
+                                        for="p-set-user-del">O'chirish</label></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">Saqlash</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global kesh
+        var SETTINGS_CACHE = { firms: [], points: [], payments: [], cats: [] };
+        var USERS_CACHE = [];
+
+        // --- NAVIGATSIYA ---
+        function switchSettingsSection(sectionName) {
+            document.querySelectorAll('.settings-content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.settings-nav-link').forEach(l => l.classList.remove('active'));
+
+            document.getElementById('settings-section-' + sectionName).classList.add('active');
+            event.target.closest('.settings-nav-link').classList.add('active');
+
+            if (sectionName === 'general') {
+                if (SETTINGS_CACHE.firms.length === 0) loadGeneralSettings();
+                else renderAllTables();
+            } else if (sectionName === 'users') {
+                if (USERS_CACHE.length === 0) loadUsersSettings();
+                else renderUsersTable(USERS_CACHE);
+            }
+        }
+
+        function switchGeneralTab(tabName) {
+            document.querySelectorAll('.general-content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.general-sub-tab').forEach(t => t.classList.remove('active'));
+
+            document.getElementById('general-content-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // --- UMUMIY SOZLAMALAR ---
+        function loadGeneralSettings() {
+            if (SETTINGS_CACHE.firms.length === 0) {
+                ['firms', 'points', 'payments', 'categories'].forEach(type => {
+                    const tbody = document.getElementById(type + '-tbody');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center p-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+                });
+            }
+
+            google.script.run.withSuccessHandler(function (data) {
+                if (data) {
+                    SETTINGS_CACHE = data;
+                    renderAllTables();
+                }
+            }).getFormData();
+        }
+
+        function renderAllTables() {
+            renderTable('firms', SETTINGS_CACHE.firms, 'firm');
+            renderTable('points', SETTINGS_CACHE.points, 'point');
+            renderTable('payments', SETTINGS_CACHE.payments, 'payment');
+            renderTable('categories', SETTINGS_CACHE.cats, 'category');
+        }
+
+        function renderTable(tableType, items, dataType) {
+            const tbody = document.getElementById(tableType + '-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><i class="bx bx-folder-open"></i><p>Ma\'lumot yo\'q</p></td></tr>';
+                return;
+            }
+
+            const displayItems = [...items].reverse();
+
+            displayItems.forEach((item, idx) => {
+                const isActive = item.status === 'active';
+                const rowId = item.row;
+                const safeValue = item.value.replace(/'/g, "\\'");
+
+
+                tbody.innerHTML += `
+                <tr style="opacity: ${isActive ? '1' : '0.5'}">
+                    <td>${items.length - idx}</td>
+                    <td>${item.value}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class='bx ${isActive ? 'bx-check-circle text-success' : 'bx-x-circle text-danger'} fs-5'></i>
+                            <span class="${isActive ? 'text-success fw-bold' : 'text-danger fw-bold'}">
+                                ${isActive ? 'Faol' : 'Nofaol'}
+                            </span>
+                        </div>
+                    </td>
+                    <td style="white-space: nowrap;">
+                        ${(!CURRENT_PERMS || CURRENT_PERMS.admin ||
+                        (CURRENT_PERMS.settings && (CURRENT_PERMS.settings.general?.edit || CURRENT_PERMS.settings.gen_edit))) ?
+                        `<button class="btn-table-action btn-edit" onclick="editDataItem('${dataType}', ${rowId}, '${safeValue}')">
+                            <i class='bx bx-edit'></i>
+                        </button>
+                        <button class="btn-table-action ${isActive ? 'btn-warning' : 'btn-success'}" onclick="toggleStatus('${dataType}', ${rowId})">
+                            <i class='bx ${isActive ? 'bx-hide' : 'bx-show'}'></i>
+                        </button>` : ''}
+
+                        ${(!CURRENT_PERMS || CURRENT_PERMS.admin ||
+                        (CURRENT_PERMS.settings && (CURRENT_PERMS.settings.general?.del || CURRENT_PERMS.settings.gen_edit))) ?
+                        `<button class="btn-table-action btn-delete" onclick="deleteDataItem('${dataType}', ${rowId})">
+                            <i class='bx bx-trash'></i>
+                        </button>` : ''}
+                    </td>
+                </tr>
+            `;
+            });
+        }
+
+        function toggleStatus(type, row) {
+            let list = getListByType(type);
+            let item = list.find(i => i.row == row);
+
+            if (item) {
+                item.status = (item.status === 'active' ? 'inactive' : 'active');
+                renderAllTables(); // Darhol yangilash
+                google.script.run.toggleDataItemStatus({ type: type, row: row });
+            }
+        }
+
+        function saveDataItem() {
+            const type = document.getElementById('data-item-type').value;
+            const row = document.getElementById('data-item-index').value; // Bu yerda "row" saqlanadi
+            const value = document.getElementById('data-item-value').value.trim();
+
+            if (!value) return Swal.fire('Xatolik!', 'Iltimos, nom kiriting!', 'error');
+
+            bootstrap.Modal.getInstance(document.getElementById('dataItemModal')).hide();
+
+            let list = getListByType(type);
+            const tempRowId = 'temp_' + Date.now(); // Vaqtincha ID
+
+
+            if (row !== '') {
+                // Tahrirlash
+                let item = list.find(i => i.row == row);
+                if (item) item.value = value;
+            } else {
+                // Yangi qo'shish
+                list.push({ value: value, status: 'active', row: tempRowId });
+            }
+            renderAllTables();
+            Swal.fire({ title: 'Muvaffaqiyatli!', icon: 'success', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
+
+
+            google.script.run.withSuccessHandler(function (newRowId) {
+                // Yangi qo'shilgan elementning vaqtincha ID sini haqiqiyisiga almashtiramiz
+                if (row === '') {
+                    let tempItem = list.find(i => i.row === tempRowId);
+                    if (tempItem) tempItem.row = newRowId;
+                    renderAllTables(); // ID yangilangandan keyin qayta chizamiz
+                }
+            }).saveDataItem({ type: type, row: row === '' ? -1 : row, value: value });
+        }
+
+        function deleteDataItem(type, row) {
+            Swal.fire({
+                title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Ha',
+                cancelButtonColor: '#198754',
+                cancelButtonText: 'Yo\'q'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let list = getListByType(type);
+                    // Ro'yxatdan o'chirish (row bo'yicha)
+                    if (type === 'firm') SETTINGS_CACHE.firms = list.filter(i => i.row != row);
+                    if (type === 'point') SETTINGS_CACHE.points = list.filter(i => i.row != row);
+                    if (type === 'payment') SETTINGS_CACHE.payments = list.filter(i => i.row != row);
+                    if (type === 'category') SETTINGS_CACHE.cats = list.filter(i => i.row != row);
+
+                    renderAllTables();
+                    Swal.fire({ title: 'Muvaffaqiyatli!', icon: 'success', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
+
+                    google.script.run.deleteDataItem({ type: type, row: row });
+                }
+            });
+        }
+
+        function getListByType(type) {
+            if (type === 'firm') return SETTINGS_CACHE.firms;
+            if (type === 'point') return SETTINGS_CACHE.points;
+            if (type === 'payment') return SETTINGS_CACHE.payments;
+            if (type === 'category') return SETTINGS_CACHE.cats;
+            return [];
+        }
+
+        // --- MODALLAR ---
+        function showDataModal(type) {
+            document.getElementById('data-item-type').value = type;
+            document.getElementById('data-item-index').value = ''; // Yangi bo'lsa bo'sh
+            document.getElementById('data-item-value').value = '';
+            document.getElementById('dataItemModalTitle').textContent = 'Yangi qo\'shish';
+            new bootstrap.Modal(document.getElementById('dataItemModal')).show();
+        }
+
+        function editDataItem(type, row, value) {
+            document.getElementById('data-item-type').value = type;
+            document.getElementById('data-item-index').value = row; // Qator raqami
+            document.getElementById('data-item-value').value = value;
+            document.getElementById('dataItemModalTitle').textContent = 'Tahrirlash';
+            new bootstrap.Modal(document.getElementById('dataItemModal')).show();
+        }
+
+        // --- XODIMLAR (ROW BILAN) ---
+        function loadUsersSettings() {
+
+            if (typeof LOCAL_USERS_DB !== 'undefined' && LOCAL_USERS_DB.length > 0) {
+                USERS_CACHE = LOCAL_USERS_DB;
+                renderUsersTable(USERS_CACHE);
+            } else {
+                if (USERS_CACHE.length === 0) document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6" class="text-center p-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+            }
+
+
+            google.script.run.withSuccessHandler(function (users) {
+                USERS_CACHE = users || [];
+                if (typeof LOCAL_USERS_DB !== 'undefined') LOCAL_USERS_DB = users;
+                renderUsersTable(USERS_CACHE);
+            }).getAllUsers();
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="bx bx-user-x"></i><p>Xodimlar yo\'q</p></td></tr>';
+                return;
+            }
+
+            const displayUsers = [...users].reverse();
+
+            displayUsers.forEach((user, idx) => {
+                const isActive = user.s === 'active';
+                const rowId = user.row;
+
+
+                tbody.innerHTML += `
+                <tr style="opacity: ${isActive ? '1' : '0.6'}">
+                    <td>${users.length - idx}</td>
+                    <td>${user.u}</td>
+                    <td>******</td>
+                    <td><span class="badge-role ${user.r === 'Admin' ? 'badge-admin' : 'badge-operator'}">${user.r}</span></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class='bx ${isActive ? 'bx-check-circle text-success' : 'bx-x-circle text-danger'} fs-5'></i>
+                            <span class="${isActive ? 'text-success fw-bold' : 'text-danger fw-bold'}">
+                                ${isActive ? 'Faol' : 'Nofaol'}
+                            </span>
+                        </div>
+                    </td>
+                    <td style="white-space: nowrap;">
+                        ${(!CURRENT_PERMS || CURRENT_PERMS.admin ||
+                        (CURRENT_PERMS.settings && (CURRENT_PERMS.settings.users?.edit || CURRENT_PERMS.settings.user_edit))) ?
+                        `<button class="btn-table-action btn-edit" onclick="editUser(${rowId})">
+                            <i class='bx bx-edit'></i>
+                        </button>
+                        <button class="btn-table-action ${isActive ? 'btn-warning' : 'btn-success'}" onclick="toggleUserStatus(${rowId})">
+                            <i class='bx ${isActive ? 'bx-hide' : 'bx-show'}'></i>
+                        </button>` : ''}
+
+                        ${(!CURRENT_PERMS || CURRENT_PERMS.admin ||
+                        (CURRENT_PERMS.settings && (CURRENT_PERMS.settings.users?.del || CURRENT_PERMS.settings.user_edit))) ?
+                        `<button class="btn-table-action btn-delete" onclick="deleteUser(${rowId})">
+                            <i class='bx bx-trash'></i>
+                        </button>` : ''}
+                    </td>
+                </tr>
+            `;
+            });
+        }
+
+        function toggleUserStatus(row) {
+            let user = USERS_CACHE.find(u => u.row == row);
+            if (user) {
+                user.s = (user.s === 'active' ? 'inactive' : 'active');
+                renderUsersTable(USERS_CACHE);
+
+                // SYNC GLOBAL DB
+                if (typeof LOCAL_USERS_DB !== 'undefined') {
+                    let globalUser = LOCAL_USERS_DB.find(u => u.row == row || (u.u === user.u && u.p === user.p));
+                    if (globalUser) globalUser.s = user.s;
+                }
+
+                google.script.run.toggleUserStatus(row);
+            }
+        }
+
+        function saveUser() {
+            const row = document.getElementById('user-index').value;
+            const login = document.getElementById('user-login').value.trim();
+            const password = document.getElementById('user-password').value.trim();
+            const role = document.getElementById('user-role').value;
+
+            if (!login || !password) return Swal.fire('Xato', 'Login va parolni kiriting', 'error');
+
+            // Huquqlarni yig'ish
+            const permissions = {
+                kirim: {
+                    view: document.getElementById('p-kirim-view').checked,
+                    add: document.getElementById('p-kirim-add').checked,
+                    edit: document.getElementById('p-kirim-edit').checked,
+                    del: document.getElementById('p-kirim-del').checked
+                },
+                chiqim: {
+                    view: document.getElementById('p-chiqim-view').checked,
+                    add: document.getElementById('p-chiqim-add').checked,
+                    edit: document.getElementById('p-chiqim-edit').checked,
+                    del: document.getElementById('p-chiqim-del').checked
+                },
+                trans: {
+                    view: document.getElementById('p-trans-view').checked,
+                    add: document.getElementById('p-trans-add').checked,
+                    edit: document.getElementById('p-trans-edit').checked,
+                    del: document.getElementById('p-trans-del').checked
+                },
+                dash: { view: document.getElementById('p-dash-view').checked },
+                settings: {
+                    general: {
+                        view: document.getElementById('p-set-gen-view').checked,
+                        add: document.getElementById('p-set-gen-add').checked,
+                        edit: document.getElementById('p-set-gen-edit').checked,
+                        del: document.getElementById('p-set-gen-del').checked
+                    },
+                    users: {
+                        view: document.getElementById('p-set-user-view').checked,
+                        add: document.getElementById('p-set-user-add').checked,
+                        edit: document.getElementById('p-set-user-edit').checked,
+                        del: document.getElementById('p-set-user-del').checked
+                    }
+                }
+            };
+
+            // Agar Admin tanlangan bo'lsa, baribir hamma huquqni berib yuboramiz (ehtiyot shart)
+            if (role === 'Admin') {
+                // Backendda ham tekshiriladi, lekin bu yerda vizual qoladi
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+
+            // Keshni yangilash
+            let syncedUser = null;
+            if (row !== '') {
+                let user = USERS_CACHE.find(u => u.row == row);
+                if (user) {
+                    user.u = login;
+                    if (password) user.p = password; // Faqat yozilgan bo'lsa o'zgaradi
+                    user.r = role;
+                    user.perms = permissions;
+                    syncedUser = user;
+                }
+            } else {
+                let newUser = { u: login, p: password, r: role, s: 'active', perms: permissions, row: 'temp' };
+                USERS_CACHE.push(newUser);
+                syncedUser = newUser;
+            }
+            renderUsersTable(USERS_CACHE);
+
+            // SYNC GLOBAL DB
+            if (typeof LOCAL_USERS_DB !== 'undefined' && syncedUser) {
+                if (row !== '') {
+                    // Edit
+                    let globalUser = LOCAL_USERS_DB.find(u => u.row == row || (u.u === syncedUser.u)); // Simple match
+                    if (globalUser) {
+                        globalUser.u = syncedUser.u;
+                        globalUser.p = syncedUser.p;
+                        globalUser.r = syncedUser.r;
+                        globalUser.perms = syncedUser.perms;
+                    }
+                } else {
+                    // Add
+                    LOCAL_USERS_DB.push({ ...syncedUser }); // Clone it
+                }
+            }
+
+
+            Swal.fire({
+                position: 'top-end',
+                icon: 'success',
+                title: 'Muvaffaqiyatli!',
+                showConfirmButton: false,
+                timer: 1500,
+                toast: true
+            });
+
+
+            google.script.run.withSuccessHandler((users) => {
+                loadUsersSettings();
+
+                if (users && typeof LOCAL_USERS_DB !== 'undefined') LOCAL_USERS_DB = users;
+            }).saveUser({
+                row: row === '' ? -1 : row,
+                login: login,
+                password: password,
+                role: role,
+                permissions: permissions
+            });
+        }
+
+        function deleteUser(row) {
+            Swal.fire({ title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ha', cancelButtonColor: '#198754', cancelButtonText: 'Yo\'q' })
+                .then((result) => {
+                    if (result.isConfirmed) {
+                        USERS_CACHE = USERS_CACHE.filter(u => u.row != row);
+                        renderUsersTable(USERS_CACHE);
+
+                        // SYNC GLOBAL DB
+                        if (typeof LOCAL_USERS_DB !== 'undefined') {
+                            LOCAL_USERS_DB = LOCAL_USERS_DB.filter(u => u.row != row);
+                        }
+
+                        Swal.fire({ title: 'Muvaffaqiyatli!', icon: 'success', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
+                        google.script.run.deleteUser(row);
+                    }
+                });
+        }
+
+        function showUserModal() {
+            document.getElementById('user-index').value = '';
+            document.getElementById('user-login').value = '';
+            document.getElementById('user-password').value = '';
+            document.getElementById('userModalTitle').textContent = 'Yangi xodim';
+            new bootstrap.Modal(document.getElementById('userModal')).show();
+        }
+
+        function editUser(row) {
+            let user = USERS_CACHE.find(u => u.row == row);
+            if (user) {
+                document.getElementById('user-index').value = row;
+                document.getElementById('user-login').value = user.u;
+                document.getElementById('user-password').value = '';
+                document.getElementById('user-password').placeholder = "O'zgartirish uchun yangi parol kiriting";
+                document.getElementById('user-role').value = user.r;
+
+                // Checkboxlarni to'ldirish
+                const p = user.perms || {}; // Agar bo'sh bo'lsa
+
+                const setCh = (id, val) => document.getElementById(id).checked = !!val;
+
+                const isFull = (user.r === 'Admin' && !user.perms);
+
+                setCh('p-kirim-view', isFull || p.kirim?.view);
+                setCh('p-kirim-add', isFull || p.kirim?.add);
+                setCh('p-kirim-edit', isFull || p.kirim?.edit);
+                setCh('p-kirim-del', isFull || p.kirim?.del);
+
+                setCh('p-chiqim-view', isFull || p.chiqim?.view);
+                setCh('p-chiqim-add', isFull || p.chiqim?.add);
+                setCh('p-chiqim-edit', isFull || p.chiqim?.edit);
+                setCh('p-chiqim-del', isFull || p.chiqim?.del);
+
+                setCh('p-trans-view', isFull || p.trans?.view);
+                setCh('p-trans-add', isFull || p.trans?.add);
+                setCh('p-trans-edit', isFull || p.trans?.edit);
+                setCh('p-trans-del', isFull || p.trans?.del);
+
+                setCh('p-dash-view', isFull || p.dash?.view);
+
+                if (p.settings && p.settings.general) {
+                    setCh('p-set-gen-view', isFull || p.settings.general.view);
+                    setCh('p-set-gen-add', isFull || p.settings.general.add);
+                    setCh('p-set-gen-edit', isFull || p.settings.general.edit);
+                    setCh('p-set-gen-del', isFull || p.settings.general.del);
+                } else {
+                    setCh('p-set-gen-view', isFull || p.settings?.gen_view);
+                    setCh('p-set-gen-edit', isFull || p.settings?.gen_edit);
+                }
+
+                if (p.settings && p.settings.users) {
+                    setCh('p-set-user-view', isFull || p.settings.users.view);
+                    setCh('p-set-user-add', isFull || p.settings.users.add);
+                    setCh('p-set-user-edit', isFull || p.settings.users.edit);
+                    setCh('p-set-user-del', isFull || p.settings.users.del);
+                } else {
+                    // Eski format
+                    setCh('p-set-user-view', isFull || p.settings?.user_view);
+                    setCh('p-set-user-edit', isFull || p.settings?.user_edit);
+                }
+
+                document.getElementById('userModalTitle').textContent = 'Xodimni tahrirlash';
+                new bootstrap.Modal(document.getElementById('userModal')).show();
+            }
+        }
+
+        loadGeneralSettings();
+    </script>
+</body>
+
+</html>

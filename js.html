@@ -3,857 +3,1404 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-  var ALL_DATA = [];      
-  var DASH_DATA = [];     
-  var CACHED_FILTERED = []; 
-  var CHART_INSTANCES = {}; 
+    var ALL_DATA = [];
+    var DASH_DATA = [];
+    var CACHED_FILTERED = [];
+    var CHART_INSTANCES = {};
 
-  var CURRENT_TYPE = 'Kirim';
-  var transModal;
-  var USER_ROLE = "";
-  var LOCAL_USERS_DB = (typeof PRELOADED_USERS !== 'undefined') ? PRELOADED_USERS : [];
-  
-  const LIMIT_SUMMA = 999999999;
-  const LIMIT_IZOH = 150;
-  const LIMIT_NUQTA = 30;
+    var CURRENT_TYPE = 'Kirim';
+    var transModal;
+    var USER_ROLE = "";
+    var LOCAL_USERS_DB = (typeof PRELOADED_USERS !== 'undefined') ? PRELOADED_USERS : [];
 
-  function switchTab(tabName, element) {
-    if(tabName === 'dashboard' && USER_ROLE.toLowerCase() !== 'admin') { 
-        Swal.fire('Ruxsat yo\'q', 'Siz dashboardni ko\'ra olmaysiz!', 'error'); return; 
-    }
-    
-    document.getElementById('view-dashboard').style.display = 'none';
-    document.getElementById('view-list').style.display = 'none';
-    document.getElementById('view-about').style.display = 'none';
-    document.getElementById('view-' + tabName).style.display = 'block';
-    
-    if(tabName === 'dashboard') {
-        setTimeout(loadDashboard, 100);
-    }
-    
-    if(tabName === 'list') { 
-        if (ALL_DATA.length > 0) {
-            renderCurrentView(); 
-            calculateLocalBalance();
-            refreshList(true);
-        } else {
-            refreshList(false);  
+    var CURRENT_USD_RATE = 0;
+    var LAST_CHECKED_RATE_DATE = "";
+    var LAST_FETCH_QUERY_DATE = "";
+
+    const LIMIT_SUMMA = 999999999;
+    const LIMIT_IZOH = 150;
+    const LIMIT_NUQTA = 30;
+
+    function switchTab(tabName, element) {
+        if (tabName === 'dashboard' && USER_ROLE.toLowerCase() !== 'admin') {
+            Swal.fire('Ruxsat yo\'q', 'Siz dashboardni ko\'ra olmaysiz!', 'error');
+            return;
         }
-        loadBalances();
-    }
-    
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    if(element) element.classList.add('active');
-  }
 
-  function loadDropdowns() {
-      google.script.run.withSuccessHandler(function(data) {
-          if (data) {
-              fillSelect('d-point', data.points);
-              fillSelect('d-pay', data.payments);
-              fillSelect('d-cat', data.cats);
-              var accounts = ["Naqd", "Bank", "P2P", "Dollar"];
-              fillSelect('transfer-from', accounts);
-              fillSelect('transfer-to', accounts);
-          }
-      }).getFormData();
-  }
+        document.getElementById('view-dashboard').style.display = 'none';
+        document.getElementById('view-list').style.display = 'none';
+        document.getElementById('view-settings').style.display = 'none';
+        document.getElementById('view-about').style.display = 'none';
 
-  function fillSelect(id, list) {
-      let s = document.getElementById(id); if(!s) return;
-      s.innerHTML = "<option value='' selected>Tanlang...</option>";
-      if(list && Array.isArray(list)) list.forEach(i => { let o = document.createElement('option'); o.value = i; o.text = i; s.add(o); });
-  }
-
-  function calculateLocalBalance() {
-      let bal = { "Naqd": 0, "P2P": 0, "Dollar": 0, "Bank": 0 };
-
-      ALL_DATA.forEach(item => {
-          let k = parseMoney(item.kirim);
-          let c = parseMoney(item.chiqim);
-          let cat = item.cat;
-          let pay = item.pay;
-
-          if (cat === "Transfer" || cat === "O'tkazma") {
-              if (pay && pay.includes('->')) {
-                  let parts = pay.split('->');
-                  let source = parts[0].trim();
-                  let dest = parts[1].trim();
-                  
-                  if (bal.hasOwnProperty(source)) bal[source] -= c;
-                  if (bal.hasOwnProperty(dest)) bal[dest] += k;
-              }
-          } 
-          else {
-              if (bal.hasOwnProperty(pay)) {
-                  bal[pay] += (k - c);
-              }
-          }
-      });
-
-      if(document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm";
-      if(document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm";
-      if(document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar);
-  }
-
-  function loadBalances() { 
-      google.script.run.withSuccessHandler(function(bal) { 
-          if(bal) { 
-              if(document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm"; 
-              if(document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm"; 
-              if(document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar); 
-          } 
-      }).getRealTimeBalance(); 
-  }
-
-  function loadDashboard() {
-    const periodSel = document.getElementById('filter-period');
-    if(periodSel) toggleCustomDate(periodSel.value);
-    
-    const tbody = document.getElementById('dash-table-body');
-    if(tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center"><div class="spinner-border text-primary"></div><br>Yuklanmoqda...</td></tr>`;
-
-    google.script.run.withSuccessHandler(function(data) {
-        DASH_DATA = data || []; 
-        applyDashFilters(); 
-    }).getTransactionsList();
-  }
-
-  function applyDashFilters() {
-    const periodEl = document.getElementById('filter-period');
-    const firmEl = document.getElementById('filter-firm');
-    if(!periodEl || !firmEl) return;
-
-    toggleCustomDate(periodEl.value); 
-    
-    let dates = getStartEndDates(periodEl.value);
-    
-    let filtered = DASH_DATA.filter(item => { 
-        let d = new Date(item.date); 
-        return d >= dates.start && d <= dates.end; 
-    });
-    
-    CACHED_FILTERED = filtered;
-
-    let isMonthly = (periodEl.value === 'this_year' || periodEl.value === 'last_year');
-    if(periodEl.value === 'custom') {
-        const diff = Math.abs(dates.end - dates.start) / (1000*60*60*24);
-        if(diff > 31) isMonthly = true;
-    }
-
-    let stats = calculateStats(filtered, firmEl.value, isMonthly);
-
-    renderKPIs(stats);
-    renderCharts(stats); 
-    renderDashTable(stats.detailedList);
-
-    updateSpecificChartSelect(filtered, firmEl.value);
-    renderSpecificPointChart();
-  }
-
-  function updateSpecificChartSelect(data, selectedFirm) {
-      const select = document.getElementById('chart-point-select');
-      if(!select) return;
-      
-      const IGNORED = ["DONIYOR AKA", "BOSHQA", "DIREKTOR", "KASSA", "TRANSFER", "O'TKAZMA"];
-      let currentVal = select.value;
-      let points = new Set();
-
-      data.forEach(item => {
-          let inc = parseMoney(item.kirim);
-          if(item.point && inc > 0) {
-             let pName = (item.point || "").toUpperCase().trim();
-             if(IGNORED.some(bad => pName.includes(bad))) return;
-             
-             let isSmart = pName.includes('SMARTMIZ');
-             if(selectedFirm === 'all') points.add(item.point);
-             else if(selectedFirm === 'Greenpen' && !isSmart) points.add(item.point);
-             else if(selectedFirm === 'Smartmiz' && isSmart) points.add(item.point);
-          }
-      });
-
-      select.innerHTML = "";
-      if(points.size === 0) {
-          let opt = document.createElement('option'); opt.text = "Ma'lumot yo'q"; select.add(opt); return;
-      }
-
-      let sortedPoints = Array.from(points).sort();
-      sortedPoints.forEach(p => { let opt = document.createElement('option'); opt.value = p; opt.text = p; select.add(opt); });
-
-      if(currentVal && sortedPoints.includes(currentVal)) select.value = currentVal;
-      else select.selectedIndex = 0;
-  }
-
-  function renderSpecificPointChart() {
-      const select = document.getElementById('chart-point-select');
-      const ctx = document.getElementById('chartSpecific');
-      if(!select || !ctx) return;
-
-      const selectedPoint = select.value;
-
-      if(!selectedPoint || selectedPoint === "Ma'lumot yo'q") { 
-          destroyChart('specific'); 
-          const totalDisplay = document.getElementById('specific-point-total');
-          if(totalDisplay) totalDisplay.innerText = "0 so'm";
-          return; 
-      }
-
-      const periodEl = document.getElementById('filter-period');
-      let dates = getStartEndDates(periodEl.value);
-      let isMonthly = (periodEl.value === 'this_year' || periodEl.value === 'last_year');
-      if(periodEl.value === 'custom') {
-          const diff = Math.abs(dates.end - dates.start) / (1000*60*60*24);
-          if(diff > 31) isMonthly = true;
-      }
-
-      let trendData = {};
-      let totalSum = 0; 
-      CACHED_FILTERED.forEach(item => {
-          if(item.point === selectedPoint) {
-              let inc = parseMoney(item.kirim);
-              if(inc > 0) {
-                  totalSum += inc; 
-                  let key = item.date; 
-                  if(isMonthly) key = item.date.substring(0, 7); 
-                  if(!trendData[key]) trendData[key] = 0;
-                  trendData[key] += inc;
-              }
-          }
-      });
-
-      const totalDisplay = document.getElementById('specific-point-total');
-      if(totalDisplay) {
-          totalDisplay.innerText = fmt(totalSum) + " so'm";
-      }
-
-      let labels = Object.keys(trendData).sort();
-      let dataValues = labels.map(l => trendData[l]);
-
-      const isDarkMode = document.body.classList.contains('dark-mode');
-      const chartTextColor = isDarkMode ? '#ffffff' : '#666666';
-      const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-
-      destroyChart('specific');
-      CHART_INSTANCES['specific'] = new Chart(ctx, {
-          type: 'line',
-          data: {
-              labels: labels,
-              datasets: [{
-                  label: selectedPoint,
-                  data: dataValues,
-                  borderColor: '#3b82f6',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderWidth: 2,
-                  fill: true,
-                  tension: 0.3
-              }]
-          },
-          options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { 
-                  legend: { display: false }, 
-                  tooltip: { callbacks: { title: function(c){ let l=c[0].label; if(isMonthly&&l.length===7){ let p=l.split('-'); return p[1]+"/"+p[0]; } return formatDate(l); } } } 
-              },
-              scales: { 
-                  y: { 
-                      beginAtZero: true, 
-                      grid: { color: chartGridColor },
-                      ticks: { color: chartTextColor } 
-                  }, 
-                  x: { 
-                      grid: { display: false },
-                      ticks: { color: chartTextColor }
-                  } 
-              }
-          }
-      });
-  }
-
-  function calculateStats(data, selectedFirm, isMonthlyMode) {
-    let totalIncome = 0; let totalExpense = 0; let cashIncome = 0;
-    let incomeByFirm = { "Greenpen": 0, "Smartmiz": 0 };
-    let trendData = {}; let pointsData = {}; let payData = {}; let expData = {}; let detailedList = [];
-
-    const IGNORED_POINTS = ["DONIYOR AKA", "BOSHQA", "DIREKTOR", "KASSA"];
-    const IGNORED_CATS = ["O'tkazma", "Transfer"]; 
-
-    data.forEach(item => {
-        let inc = parseMoney(item.kirim);
-        let p = (item.point||"").toUpperCase().trim();
-        let c = (item.cat||"");
-        if (IGNORED_POINTS.some(bad => p.includes(bad)) || IGNORED_CATS.includes(c)) return;
-        if (inc > 0) {
-            if (p.includes('SMARTMIZ')) incomeByFirm["Smartmiz"] += inc; 
-            else incomeByFirm["Greenpen"] += inc; 
+        const viewElement = document.getElementById('view-' + tabName);
+        if (viewElement) {
+            viewElement.style.display = 'block';
         }
-    });
-    
-    let globalIncome = incomeByFirm["Greenpen"] + incomeByFirm["Smartmiz"];
-    let gpRatio = globalIncome > 0 ? (incomeByFirm["Greenpen"] / globalIncome) : 0;
-    let smRatio = globalIncome > 0 ? (incomeByFirm["Smartmiz"] / globalIncome) : 0;
 
-    data.forEach(item => {
-        let inc = parseMoney(item.kirim); let exp = parseMoney(item.chiqim);
-        let firmName = "Umumiy"; 
-        let pointName = (item.point||"").toUpperCase().trim();
-        let catName = (item.cat||"");
-        
-        let isIgnoredPoint = IGNORED_POINTS.some(bad => pointName.includes(bad));
-        let isTransfer = IGNORED_CATS.includes(catName);
+        if (tabName === 'dashboard') {
+            setTimeout(loadDashboard, 100);
+        }
 
-        if (isTransfer) return;
-
-        if (pointName.includes('SMARTMIZ')) firmName = "Smartmiz"; else firmName = "Greenpen";
-
-        let includeRow = false; let allocatedExp = exp;
-        if (selectedFirm === 'all') includeRow = true;
-        else if (selectedFirm === 'Greenpen') { if (inc > 0 && firmName === 'Greenpen') includeRow = true; if (exp > 0) { allocatedExp = exp * gpRatio; includeRow = true; } } 
-        else if (selectedFirm === 'Smartmiz') { if (inc > 0 && firmName === 'Smartmiz') includeRow = true; if (exp > 0) { allocatedExp = exp * smRatio; includeRow = true; } }
-
-        if (includeRow) {
-            if (inc > 0 && !isIgnoredPoint && (selectedFirm === 'all' || firmName === selectedFirm)) {
-                totalIncome += inc;
-                if ((item.pay||"").toLowerCase().includes('naqd')) cashIncome += inc;
-                if (!pointsData[item.point]) pointsData[item.point] = 0; pointsData[item.point] += inc;
-                if (!(item.pay||"").includes('->')) { if (!payData[item.pay]) payData[item.pay] = 0; payData[item.pay] += inc; }
+        if (tabName === 'list') {
+            if (ALL_DATA.length > 0) {
+                renderCurrentView();
+                calculateLocalBalance();
+                refreshList(true);
+            } else {
+                refreshList(false);
             }
-            if (exp > 0) {
-                totalExpense += allocatedExp;
-                if (!expData[item.cat]) expData[item.cat] = 0; expData[item.cat] += allocatedExp;
-            }
-            let trendKey = item.date; 
-            if (isMonthlyMode) trendKey = item.date.substring(0, 7); 
-            if (!trendData[trendKey]) trendData[trendKey] = { inc: 0, exp: 0 };
-            
-            if (inc > 0 && !isIgnoredPoint && (selectedFirm === 'all' || firmName === selectedFirm)) trendData[trendKey].inc += inc;
-            if (exp > 0) trendData[trendKey].exp += allocatedExp;
-
-            detailedList.push({ ...item, exp: allocatedExp, inc: inc });
+            loadBalances();
         }
-    });
 
-    return {
-        income: totalIncome, expense: totalExpense, profit: totalIncome - totalExpense,
-        cashRatio: totalIncome > 0 ? (cashIncome / totalIncome * 100) : 0,
-        trend: trendData, points: pointsData, payments: payData, expenses: expData,
-        detailedList: detailedList.sort((a,b) => new Date(b.date) - new Date(a.date)),
-        incomeByFirm: incomeByFirm 
-    };
-  }
+        if (tabName === 'settings') {
+            if (typeof loadGeneralSettings === 'function') {
+                loadGeneralSettings();
+            }
+        }
 
-  function renderCharts(stats) {
-    const niceColors = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
-    
-    const isDarkMode = document.body.classList.contains('dark-mode'); 
-    const chartTextColor = isDarkMode ? '#ffffff' : '#666666'; 
-    const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'; 
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        if (element) element.classList.add('active');
+    }
 
-    const ctxTrend = document.getElementById('chartTrend');
-    if(ctxTrend) {
-        const sortedDates = Object.keys(stats.trend).sort();
-        destroyChart('trend');
-        CHART_INSTANCES['trend'] = new Chart(ctxTrend, {
-            type: 'bar',
+
+    function loadDropdowns() {
+        google.script.run.withSuccessHandler(function (data) {
+            if (!data) return;
+
+            fillSelect("firm", data.firms.filter(x => x.status === 'active').map(f => f.value));
+            fillSelect("d-point", data.points.filter(x => x.status === 'active').map(p => p.value));
+            fillSelect("d-cat", data.cats.filter(x => x.status === 'active').map(c => c.value));
+
+            let activePayments = data.payments.filter(p => p.status === 'active').map(p => p.value);
+            generateKirimInputs(activePayments);
+
+            const FIXED_PAY_OPTS = ['Naqd', 'P2P', 'Bank', 'Dollar'];
+
+            fillSelect("d-pay", FIXED_PAY_OPTS);
+            fillSelect("transfer-from", FIXED_PAY_OPTS);
+            fillSelect("transfer-to", FIXED_PAY_OPTS);
+
+            // Setup 'onchange' for styling
+            setupSelectStyling();
+
+        }).getFormData();
+    }
+
+    function generateKirimInputs(paymentTypes) {
+        const container = document.getElementById('kirim-inputs-container');
+        if (!container) return;
+
+        container.innerHTML = ""; // Clear loader
+
+        paymentTypes.forEach(type => {
+            let row = document.createElement('div');
+            row.className = "row g-2 mb-2 align-items-center";
+
+            // Determine color class based on type name (heuristic)
+            let colorClass = "text-secondary";
+            let typeUpper = type.toUpperCase();
+            if (typeUpper.includes('NAQD')) colorClass = "text-success";
+            else if (typeUpper.includes('P2P')) colorClass = "text-primary";
+            else if (typeUpper.includes('UZCARD')) colorClass = "text-info";
+            else if (typeUpper.includes('HUMO')) colorClass = "text-warning";
+            else if (typeUpper.includes('DOLLAR')) colorClass = "text-success"; // Green for money
+
+            row.innerHTML = `
+                <div class="col-4 fw-bold ${colorClass}">${type}</div>
+                <div class="col-8">
+                    <input type="number" step="0.01" class="form-control pay-input" data-type="${type}" placeholder="0">
+                </div>
+            `;
+            container.appendChild(row);
+        });
+
+        // Re-attach event listeners for total calculation
+        document.querySelectorAll('.pay-input').forEach(inp => {
+            inp.addEventListener('keyup', calcBatchTotal);
+            inp.addEventListener('change', calcBatchTotal);
+        });
+    }
+
+    function setupSelectStyling() {
+        document.querySelectorAll('select').forEach(sel => {
+            sel.addEventListener('change', function () {
+                if (this.value === "") { this.classList.remove('select-filled'); this.classList.add('select-placeholder'); }
+                else { this.classList.remove('select-placeholder'); this.classList.add('select-filled'); }
+            });
+            // Trigger once
+            if (sel.value === "") sel.classList.add('select-placeholder');
+        });
+    }
+
+    function fillSelect(id, list) {
+        let s = document.getElementById(id);
+        if (!s) return;
+
+        s.innerHTML = "";
+        let def = document.createElement("option");
+        def.value = "";
+        def.text = "Tanlang...";
+        s.add(def);
+
+        if (list && Array.isArray(list)) {
+            list.forEach(item => {
+                let o = document.createElement("option");
+                o.value = item;
+                o.text = item;
+                s.add(o);
+            });
+        }
+    }
+
+    function calculateLocalBalance() {
+        let bal = { "Naqd": 0, "P2P": 0, "Dollar": 0, "Bank": 0 };
+
+        ALL_DATA.forEach(item => {
+            let k = parseMoney(item.kirim);
+            let c = parseMoney(item.chiqim);
+            let cat = item.cat;
+            let pay = item.pay;
+
+            if (cat === "Transfer" || cat === "O'tkazma") {
+                if (pay && pay.includes('->')) {
+                    let parts = pay.split('->');
+                    let source = parts[0].trim();
+                    let dest = parts[1].trim();
+
+                    if (bal.hasOwnProperty(source)) bal[source] -= c;
+                    if (bal.hasOwnProperty(dest)) bal[dest] += k;
+                }
+            }
+            else {
+                if (bal.hasOwnProperty(pay)) {
+                    bal[pay] += (k - c);
+                }
+            }
+        });
+
+        if (document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm";
+        if (document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm";
+        if (document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar);
+    }
+
+    function loadBalances() {
+        google.script.run.withSuccessHandler(function (bal) {
+            if (bal) {
+                if (document.getElementById('bal-naqd')) document.getElementById('bal-naqd').innerText = fmt(bal.Naqd) + " so'm";
+                if (document.getElementById('bal-p2p')) document.getElementById('bal-p2p').innerText = fmt(bal.P2P) + " so'm";
+                if (document.getElementById('bal-dollar')) document.getElementById('bal-dollar').innerText = "$ " + fmt(bal.Dollar);
+            }
+        }).getRealTimeBalance();
+    }
+
+    function loadDashboard() {
+        const periodSel = document.getElementById('filter-period');
+        if (periodSel) toggleCustomDate(periodSel.value);
+
+        const tbody = document.getElementById('dash-table-body');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center"><div class="spinner-border text-primary"></div><br>Yuklanmoqda...</td></tr>`;
+
+        google.script.run.withSuccessHandler(function (data) {
+            DASH_DATA = data || [];
+            applyDashFilters();
+        }).getTransactionsList();
+    }
+
+    function applyDashFilters() {
+        const periodEl = document.getElementById('filter-period');
+        const firmEl = document.getElementById('filter-firm');
+        if (!periodEl || !firmEl) return;
+
+        toggleCustomDate(periodEl.value);
+
+        let dates = getStartEndDates(periodEl.value);
+
+        let filtered = DASH_DATA.filter(item => {
+            let d = new Date(item.date);
+            return d >= dates.start && d <= dates.end;
+        });
+
+        CACHED_FILTERED = filtered;
+
+        let isMonthly = (periodEl.value === 'this_year' || periodEl.value === 'last_year');
+        if (periodEl.value === 'custom') {
+            const diff = Math.abs(dates.end - dates.start) / (1000 * 60 * 60 * 24);
+            if (diff > 31) isMonthly = true;
+        }
+
+        let stats = calculateStats(filtered, firmEl.value, isMonthly);
+
+        // --- TREND ANALYSIS LOGIC ---
+        let prevDates = getPreviousPeriodDates(periodEl.value, dates.start, dates.end);
+
+        let prevFiltered = DASH_DATA.filter(item => {
+            let d = new Date(item.date);
+            return d >= prevDates.start && d <= prevDates.end;
+        });
+
+        // "Same Day" logic for current periods
+        // Only apply cutoff if explicitly 'this_month' or 'this_year'
+        if (periodEl.value === 'this_month') {
+            let cutoffDate = new Date(); // Today
+            let dayNum = cutoffDate.getDate();
+            prevFiltered = prevFiltered.filter(item => {
+                let d = new Date(item.date);
+                return d.getDate() <= dayNum;
+            });
+        }
+        else if (periodEl.value === 'this_year') {
+            let cutoffDate = new Date(); // Today
+            let startOfYear = new Date(cutoffDate.getFullYear(), 0, 0);
+            let diff = cutoffDate - startOfYear;
+            let dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            prevFiltered = prevFiltered.filter(item => {
+                let d = new Date(item.date);
+                let s = new Date(d.getFullYear(), 0, 0);
+                let doy = Math.floor((d - s) / (1000 * 60 * 60 * 24));
+                return doy <= dayOfYear;
+            });
+        }
+
+        let prevStats = calculateStats(prevFiltered, firmEl.value, isMonthly);
+
+        renderKPIs(stats, prevStats); // Pass prevStats
+        renderCharts(stats);
+        renderDashTable(stats.detailedList);
+
+        updateSpecificChartSelect(filtered, firmEl.value);
+        renderSpecificPointChart();
+    }
+
+    function updateSpecificChartSelect(data, selectedFirm) {
+        const select = document.getElementById('chart-point-select');
+        if (!select) return;
+
+        const IGNORED = ["DONIYOR AKA", "BOSHQA", "DIREKTOR", "KASSA", "TRANSFER", "O'TKAZMA"];
+        let currentVal = select.value;
+        let points = new Set();
+
+        data.forEach(item => {
+            let inc = parseMoney(item.kirim);
+            if (item.point && inc > 0) {
+                let pName = (item.point || "").toUpperCase().trim();
+                if (IGNORED.some(bad => pName.includes(bad))) return;
+
+                let isSmart = pName.includes('SMARTMIZ');
+                if (selectedFirm === 'all') points.add(item.point);
+                else if (selectedFirm === 'Greenpen' && !isSmart) points.add(item.point);
+                else if (selectedFirm === 'Smartmiz' && isSmart) points.add(item.point);
+            }
+        });
+
+        select.innerHTML = "";
+        if (points.size === 0) {
+            let opt = document.createElement('option'); opt.text = "Ma'lumot yo'q"; select.add(opt); return;
+        }
+
+        let sortedPoints = Array.from(points).sort();
+        sortedPoints.forEach(p => { let opt = document.createElement('option'); opt.value = p; opt.text = p; select.add(opt); });
+
+        if (currentVal && sortedPoints.includes(currentVal)) select.value = currentVal;
+        else select.selectedIndex = 0;
+    }
+
+    function renderSpecificPointChart() {
+        const select = document.getElementById('chart-point-select');
+        const ctx = document.getElementById('chartSpecific');
+        if (!select || !ctx) return;
+
+        const selectedPoint = select.value;
+
+        if (!selectedPoint || selectedPoint === "Ma'lumot yo'q") {
+            destroyChart('specific');
+            const totalDisplay = document.getElementById('specific-point-total');
+            if (totalDisplay) totalDisplay.innerText = "0 so'm";
+            return;
+        }
+
+        const periodEl = document.getElementById('filter-period');
+        let dates = getStartEndDates(periodEl.value);
+        let isMonthly = (periodEl.value === 'this_year' || periodEl.value === 'last_year');
+        if (periodEl.value === 'custom') {
+            const diff = Math.abs(dates.end - dates.start) / (1000 * 60 * 60 * 24);
+            if (diff > 31) isMonthly = true;
+        }
+
+        let trendData = {};
+        let totalSum = 0;
+        CACHED_FILTERED.forEach(item => {
+            if (item.point === selectedPoint) {
+                let inc = parseMoney(item.kirim);
+                if (inc > 0) {
+                    totalSum += inc;
+                    let key = item.date;
+                    if (isMonthly) key = item.date.substring(0, 7);
+                    if (!trendData[key]) trendData[key] = 0;
+                    trendData[key] += inc;
+                }
+            }
+        });
+
+        const totalDisplay = document.getElementById('specific-point-total');
+        if (totalDisplay) {
+            totalDisplay.innerText = fmt(totalSum) + " so'm";
+        }
+
+        let labels = Object.keys(trendData).sort();
+        let dataValues = labels.map(l => trendData[l]);
+
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const chartTextColor = isDarkMode ? '#ffffff' : '#666666';
+        const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+        destroyChart('specific');
+        CHART_INSTANCES['specific'] = new Chart(ctx, {
+            type: 'line',
             data: {
-                labels: sortedDates,
-                datasets: [
-                    { 
-                      label: 'Kirim', 
-                      data: sortedDates.map(d => stats.trend[d].inc), 
-                      backgroundColor: '#10b981', 
-                      borderRadius: 4,
-                      maxBarThickness: 40
-                    },
-                    { 
-                      label: 'Chiqim', 
-                      data: sortedDates.map(d => stats.trend[d].exp), 
-                      backgroundColor: '#ef4444', 
-                      borderRadius: 4,
-                      maxBarThickness: 40
-                    }
-                ]
+                labels: labels,
+                datasets: [{
+                    label: selectedPoint,
+                    data: dataValues,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { grid: { display: false }, ticks: { color: chartTextColor } },
-                    y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
-                },
-                plugins: { legend: { labels: { color: chartTextColor } } }
-            }
-        });
-    }
-
-    const ctxPay = document.getElementById('chartPayments');
-    if(ctxPay) {
-        const legendBox = document.getElementById('pay-legend-container');
-        let sortedPays = Object.entries(stats.payments).sort((a,b) => b[1] - a[1]);
-        let chartLabels = sortedPays.map(e => e[0]);
-        let chartData = sortedPays.map(e => e[1]);
-        let chartColors = sortedPays.map((_, i) => niceColors[i % niceColors.length]);
-
-        if(legendBox) {
-            let html = "";
-            let total = stats.income;
-            if(total > 0) {
-                sortedPays.forEach((item, index) => {
-                    let percent = ((item[1] / total) * 100).toFixed(1);
-                    let color = chartColors[index]; 
-                    html += `<div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom border-light"><div class="d-flex align-items-center text-truncate"><span style="width: 10px; height: 10px; background-color: ${color}; border-radius: 50%; display: inline-block; margin-right: 8px; flex-shrink: 0;"></span><span class="text-muted small fw-bold text-truncate" title="${item[0]}">${item[0]}</span></div><span class="fw-bold text-dark small ms-2">${percent}%</span></div>`;
-                });
-            } else { html = "<span class='text-muted small'>Ma'lumot yo'q</span>"; }
-            legendBox.innerHTML = html;
-        }
-        if(document.getElementById('pay-total-display')) document.getElementById('pay-total-display').innerText = fmt(stats.income);
-        if(document.getElementById('pay-ratio-display')) document.getElementById('pay-ratio-display').innerText = stats.cashRatio.toFixed(1) + "%";
-
-        destroyChart('pay');
-        CHART_INSTANCES['pay'] = new Chart(ctxPay, {
-            type: 'doughnut', 
-            data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 0, hoverOffset: 4 }] },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false } } }
-        });
-    }
-
-    const ctxExp = document.getElementById('chartExpenses');
-    if(ctxExp) {
-        const expEntries = Object.entries(stats.expenses).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        let top5Sum = 0; expEntries.forEach(e => top5Sum += e[1]);
-        let percent = (stats.expense > 0) ? ((top5Sum / stats.expense) * 100).toFixed(1) : 0;
-
-        if(document.getElementById('top5-sum-display')) document.getElementById('top5-sum-display').innerText = fmt(top5Sum);
-        if(document.getElementById('top5-percent-display')) document.getElementById('top5-percent-display').innerText = percent + "%";
-
-        destroyChart('exp');
-        CHART_INSTANCES['exp'] = new Chart(ctxExp, {
-            type: 'doughnut',
-            data: { labels: expEntries.map(e => e[0]), datasets: [{ data: expEntries.map(e => e[1]), backgroundColor: niceColors, borderWidth: 0, hoverOffset: 4 }] },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
-        });
-    }
-
-    const ctxAllExp = document.getElementById('chartAllExpenses');
-    if(ctxAllExp) {
-        const allExpEntries = Object.entries(stats.expenses).sort((a,b) => b[1] - a[1]);
-        destroyChart('allExp');
-        CHART_INSTANCES['allExp'] = new Chart(ctxAllExp, {
-            type: 'bar',
-            data: { 
-                labels: allExpEntries.map(e => e[0]), 
-                datasets: [{ 
-                    label: 'Xarajat Summasi', 
-                    data: allExpEntries.map(e => e[1]), 
-                    backgroundColor: niceColors, 
-                    borderRadius: 6,
-                    maxBarThickness: 50
-                }] 
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } }, 
-                scales: { 
-                    x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, font: { size: 11, weight: 'bold' }, color: chartTextColor } },
-                    y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
-                } 
-            }
-        });
-    }
-    
-    const ctxPoints = document.getElementById('chartPoints');
-    if(ctxPoints) {
-        destroyChart('points');
-        CHART_INSTANCES['points'] = new Chart(ctxPoints, {
-            type: 'bar',
-            data: { 
-                labels: ['Greenpen', 'Smartmiz'], 
-                datasets: [{ 
-                    label: 'Jami Tushum', 
-                    data: [stats.incomeByFirm['Greenpen'], stats.incomeByFirm['Smartmiz']], 
-                    backgroundColor: ['#10b981', '#3b82f6'], 
-                    borderRadius: 5,
-                    maxBarThickness: 60
-                }] 
-            },
-            options: { 
+            options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    x: { grid: { display: false }, ticks: { color: chartTextColor } },
-                    y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { title: function (c) { let l = c[0].label; if (isMonthly && l.length === 7) { let p = l.split('-'); return p[1] + "/" + p[0]; } return formatDate(l); } } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: chartGridColor },
+                        ticks: { color: chartTextColor }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: chartTextColor }
+                    }
                 }
             }
         });
     }
-  }
 
-  function getStartEndDates(period) { const now = new Date(); let start = new Date(0), end = new Date(2100, 0, 1); if (period === 'this_month') { start = new Date(now.getFullYear(), now.getMonth(), 1); end = new Date(now.getFullYear(), now.getMonth() + 1, 0); } else if (period === 'last_month') { start = new Date(now.getFullYear(), now.getMonth() - 1, 1); end = new Date(now.getFullYear(), now.getMonth(), 0); } else if (period === 'this_year') { start = new Date(now.getFullYear(), 0, 1); end = new Date(now.getFullYear(), 11, 31); } else if (period === 'last_year') { start = new Date(now.getFullYear() - 1, 0, 1); end = new Date(now.getFullYear() - 1, 11, 31); } else if (period === 'custom') { let s = document.getElementById('date-start').value; let e = document.getElementById('date-end').value; if(s) start = new Date(s); else start = new Date(); if(e) end = new Date(e); else end = new Date(); } end.setHours(23, 59, 59, 999); start.setHours(0, 0, 0, 0); return { start, end }; }
-  function toggleCustomDate(val) { const box = document.getElementById('custom-date-box'); if(!box) return; if(val === 'custom') { box.classList.remove('d-none'); if(!document.getElementById('date-start').value) { document.getElementById('date-start').valueAsDate = new Date(); document.getElementById('date-end').valueAsDate = new Date(); } } else { box.classList.add('d-none'); } }
-  function parseMoney(val) { if(!val) return 0; let clean = String(val).replace(/[\s,]/g, ''); return parseFloat(clean) || 0; }
-  function truncate(str, max) { if (!str) return ""; if (str.length > max) return str.substring(0, max) + "..."; return str; }
-  function fmt(val) { let num = parseFloat(String(val).replace(/[\s,]/g, '')) || 0; return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
-  function formatDate(d) { if(!d) return ""; if(typeof d === 'string' && d.includes('-')) { let p = d.split('-'); if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; } var dt = new Date(d); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
-  function formatDateISO(d) { if(!d) return ""; if(typeof d === 'string' && d.includes('/')) { let p = d.split('/'); return `${p[2]}-${p[1]}-${p[0]}`; } return d; } 
-  function setPayInput(type, val) { let inp = document.querySelector(`.pay-input[data-type="${type}"]`); if(inp) inp.value = (val > 0) ? val : ""; }
-  function calcBatchTotal() { let total = 0; document.querySelectorAll('.pay-input').forEach(i => total += (parseFloat(i.value)||0)); document.getElementById('batch-total').innerText = total.toLocaleString(); }
-  function checkTransferCurrency() { let from = document.getElementById('transfer-from').value; let to = document.getElementById('transfer-to').value; let divSecond = document.getElementById('div-second-amount'); let labelMain = document.getElementById('label-amount-main'); labelMain.innerText = "SUMMA (UZS)"; divSecond.style.display = "none"; if(from === 'Dollar' || to === 'Dollar') { divSecond.style.display = "block"; } }
-  
-  function destroyChart(key) { if (CHART_INSTANCES[key]) CHART_INSTANCES[key].destroy(); }
-  function checkFilter(item) { try { let searchText = document.getElementById('filter-search').value.toLowerCase().trim(); let startVal = document.getElementById('filter-start').value; let endVal = document.getElementById('filter-end').value; if (startVal || endVal) { let itemDate = new Date(item.date); if (startVal && itemDate < new Date(startVal)) return false; if (endVal && itemDate > new Date(endVal)) return false; } if (searchText !== "") { let content = ((item.point||"") + " " + (item.cat||"") + " " + (item.note||"") + " " + (item.pay||"")).toLowerCase(); if (!content.includes(searchText)) return false; } return true; } catch (err) { return true; } }
-  function resetFilters() { if(document.getElementById('filter-search')) document.getElementById('filter-search').value = ""; if(document.getElementById('filter-start')) document.getElementById('filter-start').value = ""; if(document.getElementById('filter-end')) document.getElementById('filter-end').value = ""; renderCurrentView(); }
-  function renderKPIs(stats) { animateValue("kpi-income", stats.income); animateValue("kpi-expense", stats.expense); animateValue("kpi-net-cash", stats.profit); const ratioEl = document.getElementById("kpi-cash-ratio"); if(ratioEl) ratioEl.innerText = stats.cashRatio.toFixed(1) + "%"; }
-  function animateValue(id, end) { const obj = document.getElementById(id); if(obj) obj.innerText = fmt(end) + " so'm"; }
-  function renderDashTable(list) { const tbody = document.getElementById('dash-table-body'); if(!tbody) return; tbody.innerHTML = ""; if(list.length === 0) { tbody.innerHTML = "<tr><td colspan='6' class='text-muted py-3'>Ma'lumot topilmadi</td></tr>"; return; } list.slice(0, 100).forEach(item => { let tr = document.createElement('tr'); tr.innerHTML = `<td>${formatDate(item.date)}</td><td class="fw-bold text-truncate" style="max-width: 150px;">${item.point||item.firm||'-'}</td><td class="small text-muted text-truncate" style="max-width: 120px;">${item.cat||'-'}</td><td><span class="badge bg-light text-dark border">${item.pay||'-'}</span></td><td class="${item.inc>0?'text-success fw-bold':'text-muted'}">${item.inc>0?fmt(item.inc):'-'}</td><td class="${item.exp>0?'text-danger fw-bold':'text-muted'}">${item.exp>0?fmt(item.exp):'-'}</td>`; tbody.appendChild(tr); }); }
-  function loginSystem(e) { if(e) e.preventDefault(); var u = document.getElementById('loginUser').value.toLowerCase().trim(); var p = document.getElementById('loginPass').value.trim(); var err = document.getElementById('loginError'); var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p); if (foundUser) { USER_ROLE = foundUser.r; if(document.getElementById('user-display')) document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1); document.getElementById('login-screen').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; applyRolePermissions(); loadDashboard(); loadDropdowns(); refreshList(); calculateLocalBalance(); } else { err.innerText = "Login yoki parol noto'g'ri!"; } }
-  function logoutSystem() { USER_ROLE = ""; ALL_DATA = []; DASH_DATA = []; document.getElementById('main-app').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; }
-  function applyRolePermissions() { if (USER_ROLE.toLowerCase() !== 'admin') { let dashMenu = document.getElementById('menu-dashboard'); if(dashMenu) dashMenu.style.display = 'none'; let listBtn = document.getElementById('link-list'); if(listBtn) switchTab('list', listBtn); } else { let dashBtn = document.querySelector('.nav-link.active'); switchTab('dashboard', dashBtn); } }
-  
-  function setTransactionType(type, btnElement) { CURRENT_TYPE = type; const buttons = document.querySelectorAll('.btn-custom'); buttons.forEach(btn => btn.classList.remove('active-kirim', 'active-chiqim', 'active-boshqa')); const body = document.body; body.classList.remove('theme-green', 'theme-red', 'theme-blue'); if (type === 'Kirim') { body.classList.add('theme-green'); if(btnElement) btnElement.classList.add('active-kirim'); else { let btn = document.querySelector('.btn-custom:nth-child(1)'); if(btn) btn.classList.add('active-kirim'); } } else if (type === 'Chiqim') { body.classList.add('theme-red'); if(btnElement) btnElement.classList.add('active-chiqim'); else { let btn = document.querySelector('.btn-custom:nth-child(2)'); if(btn) btn.classList.add('active-chiqim'); } } else { body.classList.add('theme-blue'); if(btnElement) btnElement.classList.add('active-boshqa'); else { let btn = document.querySelector('.btn-custom:nth-child(3)'); if(btn) btn.classList.add('active-boshqa'); } } renderCurrentView(); }
-  
-  function refreshList(silentMode = false) { 
-      const tbody = document.getElementById('table-body'); 
-      if (!silentMode && ALL_DATA.length === 0) {
-          if(tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3"><div class="spinner-border text-primary" role="status"></div><br>Yuklanmoqda...</td></tr>`; 
-      }
-      google.script.run.withSuccessHandler(saveAndRender).getTransactionsList(); 
-  }
+    function calculateStats(data, selectedFirm, isMonthlyMode) {
+        let totalIncome = 0; let totalExpense = 0; let cashIncome = 0;
+        let incomeByFirm = { "Greenpen": 0, "Smartmiz": 0 };
+        let trendData = {}; let pointsData = {}; let payData = {}; let expData = {}; let detailedList = [];
 
-  function saveAndRender(data) { 
-      ALL_DATA = data || []; 
-      calculateLocalBalance(); 
-      const listTab = document.getElementById('view-list');
-      if (listTab && listTab.style.display !== 'none') {
-          renderCurrentView();
-      }
-  }
-  
-  function renderCurrentView() { 
-    try { 
-      const thead = document.querySelector('#main-table thead'); 
-      const tbody = document.getElementById('table-body'); 
-      if(!thead || !tbody) return; 
-      tbody.innerHTML = ""; 
-      GROUPED_DATA = []; 
-      let html = ""; 
-      let index = 1; 
+        const IGNORED_POINTS = ["DONIYOR AKA", "BOSHQA", "DIREKTOR", "KASSA"];
+        const IGNORED_CATS = ["O'tkazma", "Transfer"];
 
-      const noteStyle = 'style="width: 200px; min-width: 200px; max-width: 200px; white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2; text-align: left;"';
-      const noteHeaderStyle = 'style="width: 200px; min-width: 200px; max-width: 200px;"';
+        data.forEach(item => {
+            let inc = parseMoney(item.kirim);
+            let p = (item.point || "").toUpperCase().trim();
+            let c = (item.cat || "");
+            if (IGNORED_POINTS.some(bad => p.includes(bad)) || IGNORED_CATS.includes(c)) return;
+            if (inc > 0) {
+                if (p.includes('SMARTMIZ')) incomeByFirm["Smartmiz"] += inc;
+                else incomeByFirm["Greenpen"] += inc;
+            }
+        });
 
-      if (CURRENT_TYPE === 'Kirim') { 
-        thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Savdo Nuqtasi</th><th class="th-green">Naqd</th><th class="th-teal">P2P</th><th class="th-blue">Uzcard</th><th class="th-yellow">Humo</th><th class="th-gray">Perech.</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-gray" ${noteHeaderStyle}>Izoh</th></tr>`; 
-        
-        let filteredItems = ALL_DATA.filter(item => { return item.cat === "Savdo tushumi" && parseMoney(item.kirim) > 0 && checkFilter(item); }); 
-        let grouped = {}; 
-        filteredItems.forEach(item => { let key = item.rowId || ("temp_" + item.date + item.point); if (!grouped[key]) { grouped[key] = { rowId: item.rowId, date: item.date, point: item.point, note: item.note, naqd: 0, p2p: 0, uzcard: 0, humo: 0, perech: 0, total: 0 }; } let val = parseMoney(item.kirim); let pType = String(item.pay).toLowerCase(); if(pType.includes('naqd')) grouped[key].naqd += val; else if(pType.includes('p2p')) grouped[key].p2p += val; else if(pType.includes('uzcard')) grouped[key].uzcard += val; else if(pType.includes('humo')) grouped[key].humo += val; else if(pType.includes('perech')) grouped[key].perech += val; else grouped[key].naqd += val; grouped[key].total += val; }); 
-        let groupedList = Object.values(grouped); 
-        groupedList.sort((a, b) => new Date(b.date) - new Date(a.date)); 
-        
-        if (groupedList.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
-        
-        groupedList.forEach((item, idx) => { 
-            GROUPED_DATA.push(item); 
-            let idParam = item.rowId ? `'${item.rowId}'` : "null"; 
-            html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.point}">${truncate(item.point, 30)}</td><td class="text-success">${item.naqd > 0 ? fmt(item.naqd) : '-'}</td><td class="text-primary">${item.p2p > 0 ? fmt(item.p2p) : '-'}</td><td class="text-info">${item.uzcard > 0 ? fmt(item.uzcard) : '-'}</td><td class="text-warning">${item.humo > 0 ? fmt(item.humo) : '-'}</td><td class="text-secondary">${item.perech > 0 ? fmt(item.perech) : '-'}</td><td class="fw-bold text-primary fs-5">${fmt(item.total)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editGroup(${idx})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`; 
-        }); 
-      } else if (CURRENT_TYPE === 'Chiqim') { 
-        thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Kategoriya</th><th class="th-gray">To'lov Turi</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`; 
-        
-        let filteredData = ALL_DATA.filter(item => { return parseMoney(item.chiqim) > 0 && !item.cat.includes("O'tkazma") && item.cat !== 'Transfer' && checkFilter(item); }); 
-        filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
-        if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
-        
-        filteredData.forEach(item => { 
-            let idParam = item.rowId ? `'${item.rowId}'` : "null"; 
-            html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.cat}">${truncate(item.cat, 30)}</td><td>${item.pay}</td><td class="fw-bold text-danger fs-5">${fmt(item.chiqim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`; 
-        }); 
-      } else { 
-        thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-red">Qayerdan</th><th class="th-green">Qayerga</th><th class="th-red">Chiqim</th><th class="th-green">Kirim</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`; 
-        
-        let filteredData = ALL_DATA.filter(item => { return (item.cat === "Transfer" || item.cat.includes("O'tkazma")) && checkFilter(item); }); 
-        filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
-        if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; } 
-        
-        filteredData.forEach(item => { 
-            let idParam = item.rowId ? `'${item.rowId}'` : "null"; 
-            let fromTxt = "-"; let toTxt = "-"; 
-            if(item.pay && item.pay.includes('->')) { let p = item.pay.split('->'); fromTxt = p[0]; toTxt = p[1]; } 
-            html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold text-danger">${fromTxt}</td><td class="fw-bold text-success">${toTxt}</td><td class="fw-bold text-danger">${fmt(item.chiqim)}</td><td class="fw-bold text-success">${fmt(item.kirim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`; 
-        }); 
-      } 
-      tbody.innerHTML = html; 
-    } catch(err) { 
-        console.error("Render Error:", err); 
-        document.getElementById('table-body').innerHTML = `<tr><td colspan="11" class="text-danger p-3">Xatolik: ${err.message}</td></tr>`; 
-    } 
-  }
+        let globalIncome = incomeByFirm["Greenpen"] + incomeByFirm["Smartmiz"];
+        let gpRatio = globalIncome > 0 ? (incomeByFirm["Greenpen"] / globalIncome) : 0;
+        let smRatio = globalIncome > 0 ? (incomeByFirm["Smartmiz"] / globalIncome) : 0;
 
-  function handleFormSubmit(e) { 
-    e.preventDefault(); 
-    
-    const type = document.getElementById('currentTab').value; 
-    const mode = document.getElementById('formMode').value; 
-    const dateVal = document.getElementById('dateInput').value;
-    const note = document.getElementById('noteInput').value; 
-    const point = document.getElementById('d-point').value; 
-    
-    if(!dateVal) {
-        Swal.fire({ title: 'Xatolik!', text: 'Iltimos, sanani tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+        data.forEach(item => {
+            let inc = parseMoney(item.kirim); let exp = parseMoney(item.chiqim);
+            let firmName = "Umumiy";
+            let pointName = (item.point || "").toUpperCase().trim();
+            let catName = (item.cat || "");
+
+            let isIgnoredPoint = IGNORED_POINTS.some(bad => pointName.includes(bad));
+            let isTransfer = IGNORED_CATS.includes(catName);
+
+            if (isTransfer) return;
+
+            if (pointName.includes('SMARTMIZ')) firmName = "Smartmiz"; else firmName = "Greenpen";
+
+            let includeRow = false; let allocatedExp = exp;
+            if (selectedFirm === 'all') includeRow = true;
+            else if (selectedFirm === 'Greenpen') { if (inc > 0 && firmName === 'Greenpen') includeRow = true; if (exp > 0) { allocatedExp = exp * gpRatio; includeRow = true; } }
+            else if (selectedFirm === 'Smartmiz') { if (inc > 0 && firmName === 'Smartmiz') includeRow = true; if (exp > 0) { allocatedExp = exp * smRatio; includeRow = true; } }
+
+            if (includeRow) {
+                if (inc > 0 && !isIgnoredPoint && (selectedFirm === 'all' || firmName === selectedFirm)) {
+                    totalIncome += inc;
+                    if ((item.pay || "").toLowerCase().includes('naqd')) cashIncome += inc;
+                    if (!pointsData[item.point]) pointsData[item.point] = 0; pointsData[item.point] += inc;
+                    if (!(item.pay || "").includes('->')) { if (!payData[item.pay]) payData[item.pay] = 0; payData[item.pay] += inc; }
+                }
+                if (exp > 0) {
+                    totalExpense += allocatedExp;
+                    if (!expData[item.cat]) expData[item.cat] = 0; expData[item.cat] += allocatedExp;
+                }
+                let trendKey = item.date;
+                if (isMonthlyMode) trendKey = item.date.substring(0, 7);
+                if (!trendData[trendKey]) trendData[trendKey] = { inc: 0, exp: 0 };
+
+                if (inc > 0 && !isIgnoredPoint && (selectedFirm === 'all' || firmName === selectedFirm)) trendData[trendKey].inc += inc;
+                if (exp > 0) trendData[trendKey].exp += allocatedExp;
+
+                detailedList.push({ ...item, exp: allocatedExp, inc: inc });
+            }
+        });
+
+        return {
+            income: totalIncome, expense: totalExpense, profit: totalIncome - totalExpense,
+            cashRatio: totalIncome > 0 ? (cashIncome / totalIncome * 100) : 0,
+            trend: trendData, points: pointsData, payments: payData, expenses: expData,
+            detailedList: detailedList.sort((a, b) => new Date(b.date) - new Date(a.date)),
+            incomeByFirm: incomeByFirm
+        };
     }
 
-    if (type === 'Kirim') {
-        if(!point || point === "") {
-             Swal.fire({ title: 'Diqqat!', text: 'Iltimos, SAVDO NUQTASINI tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+    function renderCharts(stats) {
+        const niceColors = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
+
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const chartTextColor = isDarkMode ? '#ffffff' : '#666666';
+        const chartGridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+        const ctxTrend = document.getElementById('chartTrend');
+        if (ctxTrend) {
+            const sortedDates = Object.keys(stats.trend).sort();
+            destroyChart('trend');
+            CHART_INSTANCES['trend'] = new Chart(ctxTrend, {
+                type: 'bar',
+                data: {
+                    labels: sortedDates,
+                    datasets: [
+                        {
+                            label: 'Kirim',
+                            data: sortedDates.map(d => stats.trend[d].inc),
+                            backgroundColor: '#10b981',
+                            borderRadius: 4,
+                            maxBarThickness: 40
+                        },
+                        {
+                            label: 'Chiqim',
+                            data: sortedDates.map(d => stats.trend[d].exp),
+                            backgroundColor: '#ef4444',
+                            borderRadius: 4,
+                            maxBarThickness: 40
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: chartTextColor } },
+                        y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
+                    },
+                    plugins: { legend: { labels: { color: chartTextColor } } }
+                }
+            });
         }
 
-        let hasMoney = false;
-        let inputs = document.querySelectorAll('.pay-input'); 
-        for (let inp of inputs) { 
-            let v = parseFloat(inp.value) || 0; 
-            if (v > 0) hasMoney = true; 
-            if (v > LIMIT_SUMMA) { Swal.fire({ title: 'Xatolik!', text: `${inp.getAttribute('data-type')} uchun kiritilgan summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; }
-        }
-        if(!hasMoney) {
-            Swal.fire({ title: 'Diqqat!', text: 'Iltimos, kamida bitta to\'lov summasini kiriting (Naqd, P2P va h.k)!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
-        }
-    } 
-    
-    else if (type === 'Chiqim') {
-        let amount = parseFloat(document.getElementById('single-amount').value) || 0;
-        let cat = document.getElementById('d-cat').value;
-        let pay = document.getElementById('d-pay').value;
+        const ctxPay = document.getElementById('chartPayments');
+        if (ctxPay) {
+            const legendBox = document.getElementById('pay-legend-container');
+            let sortedPays = Object.entries(stats.payments).sort((a, b) => b[1] - a[1]);
+            let chartLabels = sortedPays.map(e => e[0]);
+            let chartData = sortedPays.map(e => e[1]);
+            let chartColors = sortedPays.map((_, i) => niceColors[i % niceColors.length]);
 
-        if(amount <= 0) { Swal.fire({ title: 'Diqqat!', text: 'Chiqim summasini kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
-        if(amount > LIMIT_SUMMA) { Swal.fire({ title: 'Xatolik!', text: `Summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; }
+            if (legendBox) {
+                let html = "";
+                let total = stats.income;
+                if (total > 0) {
+                    sortedPays.forEach((item, index) => {
+                        let percent = ((item[1] / total) * 100).toFixed(1);
+                        let color = chartColors[index];
+                        html += `<div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom border-light"><div class="d-flex align-items-center text-truncate"><span style="width: 10px; height: 10px; background-color: ${color}; border-radius: 50%; display: inline-block; margin-right: 8px; flex-shrink: 0;"></span><span class="text-muted small fw-bold text-truncate" title="${item[0]}">${item[0]}</span></div><span class="fw-bold text-dark small ms-2">${percent}%</span></div>`;
+                    });
+                } else { html = "<span class='text-muted small'>Ma'lumot yo'q</span>"; }
+                legendBox.innerHTML = html;
+            }
+            if (document.getElementById('pay-total-display')) document.getElementById('pay-total-display').innerText = fmt(stats.income);
+            if (document.getElementById('pay-ratio-display')) document.getElementById('pay-ratio-display').innerText = stats.cashRatio.toFixed(1) + "%";
 
-        if(!cat || cat === "") { Swal.fire({ title: 'Diqqat!', text: 'Iltimos, KATEGORIYAni tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
-        if(!pay || pay === "") { Swal.fire({ title: 'Diqqat!', text: 'Iltimos, TO\'LOV TURIni tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+            destroyChart('pay');
+            CHART_INSTANCES['pay'] = new Chart(ctxPay, {
+                type: 'doughnut',
+                data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        const ctxExp = document.getElementById('chartExpenses');
+        if (ctxExp) {
+            const expEntries = Object.entries(stats.expenses).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            let top5Sum = 0; expEntries.forEach(e => top5Sum += e[1]);
+            let percent = (stats.expense > 0) ? ((top5Sum / stats.expense) * 100).toFixed(1) : 0;
+
+            if (document.getElementById('top5-sum-display')) document.getElementById('top5-sum-display').innerText = fmt(top5Sum);
+            if (document.getElementById('top5-percent-display')) document.getElementById('top5-percent-display').innerText = percent + "%";
+
+            destroyChart('exp');
+            CHART_INSTANCES['exp'] = new Chart(ctxExp, {
+                type: 'doughnut',
+                data: { labels: expEntries.map(e => e[0]), datasets: [{ data: expEntries.map(e => e[1]), backgroundColor: niceColors, borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        const ctxAllExp = document.getElementById('chartAllExpenses');
+        if (ctxAllExp) {
+            const allExpEntries = Object.entries(stats.expenses).sort((a, b) => b[1] - a[1]);
+            destroyChart('allExp');
+            CHART_INSTANCES['allExp'] = new Chart(ctxAllExp, {
+                type: 'bar',
+                data: {
+                    labels: allExpEntries.map(e => e[0]),
+                    datasets: [{
+                        label: 'Xarajat Summasi',
+                        data: allExpEntries.map(e => e[1]),
+                        backgroundColor: niceColors,
+                        borderRadius: 6,
+                        maxBarThickness: 50
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, font: { size: 11, weight: 'bold' }, color: chartTextColor } },
+                        y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
+                    }
+                }
+            });
+        }
+
+        const ctxPoints = document.getElementById('chartPoints');
+        if (ctxPoints) {
+            destroyChart('points');
+            CHART_INSTANCES['points'] = new Chart(ctxPoints, {
+                type: 'bar',
+                data: {
+                    labels: ['Greenpen', 'Smartmiz'],
+                    datasets: [{
+                        label: 'Jami Tushum',
+                        data: [stats.incomeByFirm['Greenpen'], stats.incomeByFirm['Smartmiz']],
+                        backgroundColor: ['#10b981', '#3b82f6'],
+                        borderRadius: 5,
+                        maxBarThickness: 60
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: chartTextColor } },
+                        y: { grid: { color: chartGridColor }, ticks: { color: chartTextColor } }
+                    }
+                }
+            });
+        }
     }
-    
-    else if (type === 'Otkazma') {
-        let amount = parseFloat(document.getElementById('single-amount').value) || 0; 
-        let usdAmount = parseFloat(document.getElementById('second-amount').value) || 0; 
+
+    function getStartEndDates(period) { const now = new Date(); let start = new Date(0), end = new Date(2100, 0, 1); if (period === 'this_month') { start = new Date(now.getFullYear(), now.getMonth(), 1); end = new Date(now.getFullYear(), now.getMonth() + 1, 0); } else if (period === 'last_month') { start = new Date(now.getFullYear(), now.getMonth() - 1, 1); end = new Date(now.getFullYear(), now.getMonth(), 0); } else if (period === 'this_year') { start = new Date(now.getFullYear(), 0, 1); end = new Date(now.getFullYear(), 11, 31); } else if (period === 'last_year') { start = new Date(now.getFullYear() - 1, 0, 1); end = new Date(now.getFullYear() - 1, 11, 31); } else if (period === 'custom') { let s = document.getElementById('date-start').value; let e = document.getElementById('date-end').value; if (s) start = new Date(s); else start = new Date(); if (e) end = new Date(e); else end = new Date(); } end.setHours(23, 59, 59, 999); start.setHours(0, 0, 0, 0); return { start, end }; }
+    function toggleCustomDate(val) { const box = document.getElementById('custom-date-box'); if (!box) return; if (val === 'custom') { box.classList.remove('d-none'); if (!document.getElementById('date-start').value) { document.getElementById('date-start').valueAsDate = new Date(); document.getElementById('date-end').valueAsDate = new Date(); } } else { box.classList.add('d-none'); } }
+    function parseMoney(val) { if (!val) return 0; let clean = String(val).replace(/[\s,]/g, ''); return parseFloat(clean) || 0; }
+    function truncate(str, max) { if (!str) return ""; if (str.length > max) return str.substring(0, max) + "..."; return str; }
+    function fmt(val) { let num = parseFloat(String(val).replace(/[\s,]/g, '')) || 0; return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    function formatDate(d) { if (!d) return ""; if (typeof d === 'string' && d.includes('-')) { let p = d.split('-'); if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`; } var dt = new Date(d); return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`; }
+    function formatDateISO(d) { if (!d) return ""; if (typeof d === 'string' && d.includes('/')) { let p = d.split('/'); return `${p[2]}-${p[1]}-${p[0]}`; } return d; }
+    function setPayInput(type, val) { let inp = document.querySelector(`.pay-input[data-type="${type}"]`); if (inp) inp.value = (val > 0) ? val : ""; }
+    function calcBatchTotal() {
+        let total = 0;
+        let inputs = document.querySelectorAll('.pay-input');
+        inputs.forEach(i => total += (parseFloat(i.value) || 0));
+
+
+
+        document.getElementById('batch-total').innerText = total.toLocaleString();
+    }
+    function checkTransferCurrency() {
         let from = document.getElementById('transfer-from').value;
         let to = document.getElementById('transfer-to').value;
+        let divSecond = document.getElementById('div-second-amount');
+        let labelMain = document.getElementById('label-amount-main');
 
-        if(!from || from === "") { Swal.fire({ title: 'Diqqat!', text: '"Qayerdan" maydoni bo\'sh bo\'lishi mumkin emas!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
-        if(!to || to === "") { Swal.fire({ title: 'Diqqat!', text: '"Qayerga" maydoni bo\'sh bo\'lishi mumkin emas!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
-        if(from === to) { Swal.fire({ title: 'Xatolik!', text: 'Bir xil hisoblar o\'rtasida o\'tkazma qilib bo\'lmaydi!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+        // Reset defaults
+        if (labelMain) labelMain.innerText = "SUMMA (UZS)";
+        if (divSecond) divSecond.style.display = "none";
 
+        // If either side is Dollar, show USD input
         if (from === 'Dollar' || to === 'Dollar') {
-             if (usdAmount <= 0) {
-                 Swal.fire({ title: 'Diqqat!', text: 'Iltimos, Dollar summasini (USD) kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
-             }
-             if (usdAmount > LIMIT_SUMMA) { 
-                 Swal.fire({ title: 'Xatolik!', text: `Dollar summasi 999 999 999 USDdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; 
-             }
-        }
-
-        if (amount <= 0) {
-             Swal.fire({ title: 'Diqqat!', text: 'Iltimos, So\'m summasini (UZS) kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
-        }
-        if (amount > LIMIT_SUMMA) { 
-             Swal.fire({ title: 'Xatolik!', text: `So'm summasi(UZS) 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; 
+            if (divSecond) divSecond.style.display = "block";
         }
     }
 
-    if(note.length > LIMIT_IZOH) {
-        Swal.fire({ title: 'Diqqat!', text: `Izoh juda uzun! Maksimum ${LIMIT_IZOH} ta belgi!`, icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+    function destroyChart(key) { if (CHART_INSTANCES[key]) CHART_INSTANCES[key].destroy(); }
+    function checkFilter(item) { try { let searchText = document.getElementById('filter-search').value.toLowerCase().trim(); let startVal = document.getElementById('filter-start').value; let endVal = document.getElementById('filter-end').value; if (startVal || endVal) { let itemDate = new Date(item.date); if (startVal && itemDate < new Date(startVal)) return false; if (endVal && itemDate > new Date(endVal)) return false; } if (searchText !== "") { let content = ((item.point || "") + " " + (item.cat || "") + " " + (item.note || "") + " " + (item.pay || "")).toLowerCase(); if (!content.includes(searchText)) return false; } return true; } catch (err) { return true; } }
+    function resetFilters() { if (document.getElementById('filter-search')) document.getElementById('filter-search').value = ""; if (document.getElementById('filter-start')) document.getElementById('filter-start').value = ""; if (document.getElementById('filter-end')) document.getElementById('filter-end').value = ""; renderCurrentView(); }
+    function renderKPIs(stats, prevStats) {
+        animateValue("kpi-income", stats.income);
+        animateValue("kpi-expense", stats.expense);
+        animateValue("kpi-net-cash", stats.profit);
+
+        let cashRatio = stats.cashRatio.toFixed(1) + "%";
+        const ratioEl = document.getElementById("kpi-cash-ratio");
+        if (ratioEl) ratioEl.innerText = cashRatio;
+
+        // RENDER TRENDS
+        if (prevStats) {
+            renderTrend("trend-income", stats.income, prevStats.income);
+            renderTrend("trend-expense", stats.expense, prevStats.expense, true); // true = expense (increase is bad)
+            renderTrend("trend-profit", stats.profit, prevStats.profit);
+
+            // For cash ratio, we compare percentage points, e.g. 72% vs 70% -> +2.0%
+            let ratioDiff = stats.cashRatio - prevStats.cashRatio;
+            renderTrendSimple("trend-cash", ratioDiff);
+        }
     }
 
-    let formData = { 
-        rowId: document.getElementById('editRowId').value, 
-        formMode: mode, 
-        type: type, 
-        date: dateVal, 
-        point: point, 
-        firm: "", 
-        note: note 
-    }; 
+    function renderTrend(elId, current, previous, isExpense = false) {
+        let el = document.getElementById(elId);
+        if (!el) return;
 
-    if (mode === 'add') {
-        formData.rowId = new Date().getTime().toString();
+        // Ensure proper styling
+        el.style.fontSize = "16px";
+        el.style.fontWeight = "bold";
+        el.style.marginTop = "8px";
+        el.style.whiteSpace = "nowrap";
+
+        if (previous === 0) {
+            if (current === 0) {
+                el.innerHTML = `<span class="text-muted"><i class='bx bx-minus'></i> 0%</span>`;
+            } else {
+                el.innerHTML = `<span class="badge bg-secondary" style="font-size:14px">N/A</span>`;
+            }
+            return;
+        }
+
+        let diff = current - previous;
+        let percent = (diff / previous) * 100;
+        let pStr = Math.abs(percent).toFixed(1) + "%";
+        let sign = percent >= 0 ? "+" : "-";
+
+        // Logic for colors
+        // Expense: Increase (+, Red), Decrease (-, Green)
+        // Income/Profit: Increase (+, Green), Decrease (-, Red)
+        let isGood = isExpense ? (percent <= 0) : (percent >= 0);
+
+        // Force colors with inline styles to override any dark mode overrides
+        let colorStyle = isGood ? "color: #10b981 !important;" : "color: #ef4444 !important;";
+        let icon = percent >= 0 ? "<i class='bx bx-trending-up'></i>" : "<i class='bx bx-trending-down'></i>";
+
+        if (Math.abs(percent) < 0.1) {
+            el.innerHTML = `<span class="text-muted"><i class='bx bx-minus'></i> 0%</span>`;
+        } else {
+            el.innerHTML = `<span style="${colorStyle}">${icon} ${sign}${pStr}</span>`;
+        }
     }
 
-    if (type === 'Kirim') { 
-        let payments = {}; 
-        let inputs = document.querySelectorAll('.pay-input'); 
-        for (let inp of inputs) { 
-            let v = parseFloat(inp.value) || 0; 
-            if (v > 0) payments[inp.getAttribute('data-type')] = v; 
-        } 
-        formData.payments = payments; 
-    } else { 
-        formData.amount = parseFloat(document.getElementById('single-amount').value) || 0; 
-        if (type === 'Chiqim') { 
-            formData.category = document.getElementById('d-cat').value; 
-            formData.payment = document.getElementById('d-pay').value; 
-        } else if (type === 'Otkazma') { 
-            formData.amountIn = parseFloat(document.getElementById('second-amount').value) || 0; 
-            formData.transferFrom = document.getElementById('transfer-from').value; 
-            formData.transferTo = document.getElementById('transfer-to').value; 
-            formData.point = "O'tkazma"; 
-        } 
-    } 
+    function renderTrendSimple(elId, diff) {
+        let el = document.getElementById(elId);
+        if (!el) return;
 
-    updateLocalDataOptimistically(formData); 
-    transModal.hide();
-    
-    Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
+        el.style.fontSize = "16px";
+        el.style.fontWeight = "bold";
+        el.style.marginTop = "8px";
+        el.style.whiteSpace = "nowrap"; // Fix alignment
 
-    google.script.run.withSuccessHandler(function() { 
-        loadDashboard(); 
-        loadBalances();
-    }).withFailureHandler(function(err) { 
-        Swal.fire({ icon: 'error', title: 'Server Xatoligi!', text: 'Ma\'lumot saqlanmadi. Sahifa yangilanmoqda...' });
-        refreshList(); 
-    }).saveTransaction(formData); 
-  }
 
-  function updateLocalDataOptimistically(data) {
-      if (data.formMode === 'edit') {
-          ALL_DATA = ALL_DATA.filter(item => item.rowId != data.rowId);
-      }
+        let pStr = Math.abs(diff).toFixed(1) + "%";
+        let sign = diff >= 0 ? "+" : "-";
+        // Ratio increase is generally good
+        let isGood = diff >= 0;
+        let colorStyle = isGood ? "color: #10b981 !important;" : "color: #ef4444 !important;";
+        let icon = diff >= 0 ? "<i class='bx bx-trending-up'></i>" : "<i class='bx bx-trending-down'></i>";
 
-      if (data.type === 'Kirim') {
-          for (let payType in data.payments) {
-              ALL_DATA.push({
-                  date: data.date, firm: data.firm, point: data.point, cat: "Savdo tushumi", pay: payType,
-                  kirim: data.payments[payType], chiqim: 0, note: data.note, rowId: data.rowId
-              });
-          }
-      } else if (data.type === 'Chiqim') {
-          ALL_DATA.push({
-              date: data.date, firm: data.firm, point: data.point, cat: data.category, pay: data.payment,
-              kirim: 0, chiqim: data.amount, note: data.note, rowId: data.rowId
-          });
-      } else if (data.type === 'Otkazma') {
-           let mainAmount = data.amount;
-           let usdAmount = data.amountIn || 0;
-           let source = data.transferFrom;
-           let dest = data.transferTo;
-           
-           let finalChiqim = (source === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
-           let finalKirim = (dest === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+        if (Math.abs(diff) < 0.1) {
+            el.innerHTML = `<span class="text-muted"><i class='bx bx-minus'></i> 0%</span>`;
+        } else {
+            el.innerHTML = `<span style="${colorStyle}">${icon} ${sign}${pStr}</span>`;
+        }
+    }
 
-           ALL_DATA.push({
-              date: data.date, firm: "", point: "O'tkazma", cat: "Transfer", pay: source + " -> " + dest,
-              kirim: finalKirim, chiqim: finalChiqim, note: data.note, rowId: data.rowId
-          });
-      }
+    function getPreviousPeriodDates(period, currentStart, currentEnd) {
+        let start = new Date(currentStart);
+        let end = new Date(currentEnd);
 
-      renderCurrentView();
-      calculateLocalBalance(); 
-  }
+        if (period === 'this_month') {
+            // Example: Current is Oct 1 - Oct 31. Prev is Sep 1 - Sep 30.
+            let d = new Date(start);
+            d.setMonth(d.getMonth() - 1);
+            start = new Date(d.getFullYear(), d.getMonth(), 1);
+            end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        }
+        else if (period === 'last_month') {
+            // Current is Sep 1 - Sep 30. Prev is Aug 1 - Aug 31.
+            let d = new Date(start);
+            d.setMonth(d.getMonth() - 1);
+            start = new Date(d.getFullYear(), d.getMonth(), 1);
+            end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        }
+        else if (period === 'this_year') {
+            let d = new Date(start);
+            d.setFullYear(d.getFullYear() - 1);
+            start = new Date(d.getFullYear(), 0, 1);
+            end = new Date(d.getFullYear(), 11, 31);
+        }
+        else if (period === 'last_year') {
+            let d = new Date(start);
+            d.setFullYear(d.getFullYear() - 1);
+            start = new Date(d.getFullYear(), 0, 1);
+            end = new Date(d.getFullYear(), 11, 31);
+        }
+        else if (period === 'custom') {
+            let diffTime = end - start;
+            end = new Date(start.getTime() - (1000 * 60 * 60 * 24));
+            start = new Date(end.getTime() - diffTime);
+        }
 
-  function openModal(mode) { 
-    document.getElementById('mainForm').reset(); 
-    document.getElementById('formMode').value = mode; 
-    let now = new Date(); 
-    let today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
-    const dateInput = document.getElementById('dateInput');
-    dateInput.value = today; 
-    dateInput.max = today; 
+        // Fix: Ensure end date covers the full day until 23:59:59
+        end.setHours(23, 59, 59, 999);
+        start.setHours(0, 0, 0, 0);
 
-    if(document.getElementById('batch-total')) document.getElementById('batch-total').innerText = "0"; 
-    transModal = new bootstrap.Modal(document.getElementById('transModal')); 
-    setupFormUI(CURRENT_TYPE); 
-    if (mode === 'add') { 
-        document.getElementById('modalTitle').innerText = "Yangi " + CURRENT_TYPE + " Qo'shish"; 
-        document.getElementById('editRowId').value = ""; 
-    } 
-    transModal.show(); 
-  }
+        return { start, end };
+    }
+    function animateValue(id, end) { const obj = document.getElementById(id); if (obj) obj.innerText = fmt(end) + " so'm"; }
+    function renderDashTable(list) { const tbody = document.getElementById('dash-table-body'); if (!tbody) return; tbody.innerHTML = ""; if (list.length === 0) { tbody.innerHTML = "<tr><td colspan='6' class='text-muted py-3'>Ma'lumot topilmadi</td></tr>"; return; } list.slice(0, 100).forEach(item => { let tr = document.createElement('tr'); tr.innerHTML = `<td>${formatDate(item.date)}</td><td class="fw-bold text-truncate" style="max-width: 150px;">${item.point || item.firm || '-'}</td><td class="small text-muted text-truncate" style="max-width: 120px;">${item.cat || '-'}</td><td><span class="badge bg-light text-dark border">${item.pay || '-'}</span></td><td class="${item.inc > 0 ? 'text-success fw-bold' : 'text-muted'}">${item.inc > 0 ? fmt(item.inc) : '-'}</td><td class="${item.exp > 0 ? 'text-danger fw-bold' : 'text-muted'}">${item.exp > 0 ? fmt(item.exp) : '-'}</td>`; tbody.appendChild(tr); }); }
+    function loginSystem(e) {
+        if (e) e.preventDefault();
+        var u = document.getElementById('loginUser').value.toLowerCase().trim();
+        var p = document.getElementById('loginPass').value.trim();
+        var err = document.getElementById('loginError');
+        var foundUser = LOCAL_USERS_DB.find(user => user.u === u && user.p === p);
 
-  function setupFormUI(type) { 
-      document.getElementById('currentTab').value = type; 
-      
-      ['form-kirim','form-single'].forEach(id => document.getElementById(id).style.display='none'); 
-      
-      document.getElementById('div-second-amount').style.display = 'none'; 
+        if (foundUser) {
 
-      document.getElementById('div-point').style.display = (type === 'Kirim') ? 'block' : 'none'; 
-      
-      if (type === 'Kirim') {
-          document.getElementById('form-kirim').style.display = 'block'; 
-      } else { 
-          document.getElementById('form-single').style.display = 'block'; 
-          
-          document.getElementById('div-cat').style.display = (type === 'Chiqim') ? 'block' : 'none'; 
-          document.getElementById('div-pay').style.display = (type === 'Chiqim') ? 'block' : 'none'; 
-          
-          document.getElementById('div-transfer-fields').style.display = (type === 'Otkazma') ? 'block' : 'none'; 
-          
-          document.getElementById('label-amount-main').innerText = (type === 'Otkazma') ? "SUMMA (UZS)" : "SUMMA"; 
-      } 
-  }
-  function editGroup(index) { let item = GROUPED_DATA[index]; if(!item) return; setTransactionType('Kirim'); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = item.rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('d-point').value = item.point; document.getElementById('noteInput').value = item.note; setPayInput('Naqd', item.naqd); setPayInput('P2P', item.p2p); setPayInput('Uzcard', item.uzcard); setPayInput('Humo', item.humo); setPayInput('Perechislenie', item.perech); calcBatchTotal(); }
-  function editItem(rowId) { 
-      const item = ALL_DATA.find(r => r.rowId == rowId); 
-      if (!item) return; 
-      
-      let type = (item.cat === 'Transfer' || item.cat.includes("O'tkazma")) ? 'Otkazma' : 'Chiqim'; 
-      setTransactionType(type); 
-      openModal('edit'); 
-      document.getElementById('modalTitle').innerText = "Tahrirlash"; 
-      document.getElementById('editRowId').value = rowId; 
-      document.getElementById('dateInput').value = formatDateISO(item.date); 
-      document.getElementById('noteInput').value = item.note; 
+            if (foundUser.s !== 'active') {
+                err.innerText = "Sizning profilingiz bloklangan! Admin bilan bog'laning.";
+                return;
+            }
 
-      if(type === 'Chiqim') { 
-          document.getElementById('single-amount').value = parseMoney(item.chiqim); 
-          document.getElementById('d-pay').value = item.pay; 
-          document.getElementById('d-cat').value = item.cat; 
-      } else { 
-          let k = parseMoney(item.kirim); 
-          let c = parseMoney(item.chiqim); 
-          let val = (k > c) ? k : c; 
-          
-          if(item.pay && item.pay.includes('->')) { 
-              let parts = item.pay.split('->'); 
-              let from = parts[0].trim();
-              let to = parts[1].trim();
-              
-              document.getElementById('transfer-from').value = from; 
-              document.getElementById('transfer-to').value = to; 
-              
-              checkTransferCurrency(); 
+            USER_ROLE = foundUser.r;
+            if (document.getElementById('user-display'))
+                document.getElementById('user-display').innerText = u.charAt(0).toUpperCase() + u.slice(1);
 
-              if (from === 'Dollar' || to === 'Dollar') {
-                  document.getElementById('second-amount').value = val;
-                  document.getElementById('single-amount').value = ""; 
-              } else {
-                  document.getElementById('single-amount').value = val;
-                  document.getElementById('second-amount').value = ""; 
-              }
-          } 
-      } 
-  }
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
 
-  function deleteItem(rowId) {
-      if (!rowId) return;
-      Swal.fire({
-          title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?',
-          icon: 'warning',
-          iconColor: '#d33',
-          showCancelButton: true,
-          confirmButtonColor: '#d33',
-          cancelButtonColor: '#198754',
-          confirmButtonText: 'Ha',
-          cancelButtonText: 'Yo\'q'
-      }).then((r) => {
-          if (r.isConfirmed) {
-              ALL_DATA = ALL_DATA.filter(item => item.rowId != rowId);
-              renderCurrentView();
-              calculateLocalBalance(); 
 
-              Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+            let perms = foundUser.perms || {};
+            if (USER_ROLE === 'Admin') {
+                perms = { admin: true, ...perms };
+            }
 
-              google.script.run
-                  .withSuccessHandler(() => { loadDashboard(); })
-                  .withFailureHandler((err) => { Swal.fire({ icon: 'error', title: 'Xatolik!', text: 'Internet bilan aloqa yo\'q!' }); refreshList(); })
-                  .deleteTransaction(rowId);
-          }
-      });
-  }
+            applyPermissions(perms);
+            loadDashboard();
+            loadDropdowns();
+            refreshList();
+            calculateLocalBalance();
+        } else {
+            err.innerText = "Login yoki parol noto'g'ri!";
+        }
+    }
+    function logoutSystem() { USER_ROLE = ""; ALL_DATA = []; DASH_DATA = []; document.getElementById('main-app').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; }
+    // Global o'zgaruvchi
+    var CURRENT_PERMS = null;
+
+    function applyPermissions(permissions) {
+        CURRENT_PERMS = permissions;
+
+
+
+        const toggle = (id, show) => {
+            let el = document.getElementById(id);
+            if (el) el.style.display = show ? 'block' : 'none';
+        };
+
+        if (!permissions || permissions.admin === true) {
+            toggle('sidebar-dashboard', true);
+            toggle('sidebar-settings', true);
+            toggle('set-menu-general', true);
+            toggle('set-menu-users', true);
+            document.querySelectorAll('.btn-custom').forEach(b => b.style.display = 'inline-block');
+            document.querySelectorAll('.btn-add-item').forEach(b => b.style.display = 'flex');
+            return;
+        }
+
+        CURRENT_PERMS = permissions;
+
+
+
+        let dashView = permissions.dash && permissions.dash.view;
+        toggle('sidebar-dashboard', dashView);
+
+        // Agar Dashboard yopiq bo'lsa va hozir ochiq turgan bo'lsa -> Kirimga otamiz
+        if (!dashView && document.getElementById('view-dashboard') && document.getElementById('view-dashboard').style.display !== 'none') {
+            let listBtn = document.getElementById('link-list');
+            if (listBtn) switchTab('list', listBtn);
+        }
+
+
+        // Agar settings obyekti yo'q bo'lsa, uni bo'sh obyekt deb olamiz (xatolik bo'lmasligi uchun)
+        let settings = permissions.settings || {};
+
+        // Yangi format (general/users) yoki eski (gen_view/user_view)
+        let genView = settings.general ? settings.general.view : settings.gen_view;
+        let userView = settings.users ? settings.users.view : settings.user_view;
+
+        // Agar ikkalasi ham yopiq bo'lsa -> Asosiy menyudan yashiramiz
+        toggle('sidebar-settings', (genView || userView));
+
+
+        toggle('set-menu-general', genView);
+        toggle('set-menu-users', userView);
+
+        // MANTIQ: Agar "Umumiy" yopiq bo'lsa-yu, "Xodimlar" ochiq bo'lsa -> Xodimlarni ochamiz
+        if (!genView && userView) {
+            if (document.getElementById('settings-section-general'))
+                document.getElementById('settings-section-general').classList.remove('active');
+
+            if (document.getElementById('settings-section-users'))
+                document.getElementById('settings-section-users').classList.add('active');
+
+            // Menyudagi 'active' klassini to'g'irlash
+            let genLink = document.querySelector('#set-menu-general a');
+            let userLink = document.querySelector('#set-menu-users a');
+            if (genLink) genLink.classList.remove('active');
+            if (userLink) userLink.classList.add('active');
+        }
+
+
+        let genAdd = settings.general ? settings.general.add : settings.gen_edit;
+        let userAdd = settings.users ? settings.users.add : settings.user_edit;
+
+        document.querySelectorAll('#settings-section-general .btn-add-item').forEach(b => b.style.display = genAdd ? 'flex' : 'none');
+        document.querySelectorAll('#settings-section-users .btn-add-item').forEach(b => b.style.display = userAdd ? 'flex' : 'none');
+
+
+        // Avval hammasini yashiramiz
+        document.querySelectorAll('.btn-custom').forEach(b => b.style.display = 'none');
+
+        if (permissions.kirim && permissions.kirim.view) {
+            document.querySelectorAll('.btn-custom').forEach(btn => {
+                if (btn.innerText.toUpperCase().includes('KIRIM')) btn.style.display = 'inline-block';
+            });
+        }
+        if (permissions.chiqim && permissions.chiqim.view) {
+            document.querySelectorAll('.btn-custom').forEach(btn => {
+                if (btn.innerText.toUpperCase().includes('CHIQIM')) btn.style.display = 'inline-block';
+            });
+        }
+        if (permissions.trans && permissions.trans.view) {
+            document.querySelectorAll('.btn-custom').forEach(btn => {
+                if (btn.innerText.toUpperCase().includes('OTKAZMA') || btn.innerText.toUpperCase().includes("O'TKAZMA")) btn.style.display = 'inline-block';
+            });
+        }
+
+
+        let canAdd = (permissions.kirim?.add) || (permissions.chiqim?.add) || (permissions.trans?.add);
+        let addBtn = document.querySelector('button[onclick*="openModal(\'add\')"]');
+        if (addBtn) {
+            addBtn.style.display = canAdd ? 'inline-block' : 'none';
+        }
+    }
+
+
+    function setTransactionType(type, btnElement) {
+        CURRENT_TYPE = type;
+        const buttons = document.querySelectorAll('.btn-custom');
+        buttons.forEach(btn => btn.classList.remove('active-kirim', 'active-chiqim', 'active-boshqa'));
+        const body = document.body;
+        body.classList.remove('theme-green', 'theme-red', 'theme-blue');
+
+        if (type === 'Kirim') {
+            body.classList.add('theme-green');
+            if (btnElement) btnElement.classList.add('active-kirim');
+            else { let btn = document.querySelector('.btn-custom:nth-child(1)'); if (btn) btn.classList.add('active-kirim'); }
+        } else if (type === 'Chiqim') {
+            body.classList.add('theme-red');
+            if (btnElement) btnElement.classList.add('active-chiqim');
+            else { let btn = document.querySelector('.btn-custom:nth-child(2)'); if (btn) btn.classList.add('active-chiqim'); }
+        } else {
+            body.classList.add('theme-blue');
+            if (btnElement) btnElement.classList.add('active-boshqa');
+            else { let btn = document.querySelector('.btn-custom:nth-child(3)'); if (btn) btn.classList.add('active-boshqa'); }
+        }
+
+        // Update Add Button Visibility
+        let addBtn = document.querySelector('button[onclick*="openModal(\'add\')"]');
+        if (addBtn) {
+            let canAdd = false;
+            if (!CURRENT_PERMS || CURRENT_PERMS.admin) canAdd = true;
+            else if (type === 'Kirim') canAdd = CURRENT_PERMS.kirim && CURRENT_PERMS.kirim.add;
+            else if (type === 'Chiqim') canAdd = CURRENT_PERMS.chiqim && CURRENT_PERMS.chiqim.add;
+            else canAdd = CURRENT_PERMS.trans && CURRENT_PERMS.trans.add;
+
+            addBtn.style.display = canAdd ? 'inline-block' : 'none';
+        }
+
+        renderCurrentView();
+    }
+
+    function refreshList(silentMode = false) {
+        const tbody = document.getElementById('table-body');
+        if (!silentMode && ALL_DATA.length === 0) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3"><div class="spinner-border text-primary" role="status"></div><br>Yuklanmoqda...</td></tr>`;
+        }
+        google.script.run.withSuccessHandler(saveAndRender).getTransactionsList();
+    }
+
+    function saveAndRender(data) {
+        ALL_DATA = data || [];
+        calculateLocalBalance();
+        const listTab = document.getElementById('view-list');
+        if (listTab && listTab.style.display !== 'none') {
+            renderCurrentView();
+        }
+    }
+
+    function renderCurrentView() {
+        try {
+            const thead = document.querySelector('#main-table thead');
+            const tbody = document.getElementById('table-body');
+            if (!thead || !tbody) return;
+            tbody.innerHTML = "";
+            GROUPED_DATA = [];
+            let html = "";
+            let index = 1;
+
+            const noteStyle = 'style="width: 200px; min-width: 200px; max-width: 200px; white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2; text-align: left;"';
+            const noteHeaderStyle = 'style="width: 200px; min-width: 200px; max-width: 200px;"';
+
+            if (CURRENT_TYPE === 'Kirim') {
+                thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Savdo Nuqtasi</th><th class="th-green">Naqd</th><th class="th-teal">P2P</th><th class="th-blue">Uzcard</th><th class="th-yellow">Humo</th><th class="th-gray">Perech.</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-gray" ${noteHeaderStyle}>Izoh</th></tr>`;
+
+                let filteredItems = ALL_DATA.filter(item => { return item.cat === "Savdo tushumi" && parseMoney(item.kirim) > 0 && checkFilter(item); });
+                let grouped = {};
+                filteredItems.forEach(item => { let key = item.rowId || ("temp_" + item.date + item.point); if (!grouped[key]) { grouped[key] = { rowId: item.rowId, date: item.date, point: item.point, note: item.note, naqd: 0, p2p: 0, uzcard: 0, humo: 0, perech: 0, total: 0 }; } let val = parseMoney(item.kirim); let pType = String(item.pay).toLowerCase(); if (pType.includes('naqd')) grouped[key].naqd += val; else if (pType.includes('p2p')) grouped[key].p2p += val; else if (pType.includes('uzcard')) grouped[key].uzcard += val; else if (pType.includes('humo')) grouped[key].humo += val; else if (pType.includes('perech')) grouped[key].perech += val; else grouped[key].naqd += val; grouped[key].total += val; });
+                let groupedList = Object.values(grouped);
+                groupedList.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (groupedList.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; }
+
+                groupedList.forEach((item, idx) => {
+                    GROUPED_DATA.push(item);
+                    let idParam = item.rowId ? `'${item.rowId}'` : "null";
+                    html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.point}">${truncate(item.point, 30)}</td><td class="text-success">${item.naqd > 0 ? fmt(item.naqd) : '-'}</td><td class="text-primary">${item.p2p > 0 ? fmt(item.p2p) : '-'}</td><td class="text-info">${item.uzcard > 0 ? fmt(item.uzcard) : '-'}</td><td class="text-warning">${item.humo > 0 ? fmt(item.humo) : '-'}</td><td class="text-secondary">${item.perech > 0 ? fmt(item.perech) : '-'}</td><td class="fw-bold text-primary fs-5">${fmt(item.total)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editGroup(${idx})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`;
+                });
+            } else if (CURRENT_TYPE === 'Chiqim') {
+                thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-dark">Kategoriya</th><th class="th-gray">To'lov Turi</th><th class="th-red">SUMMA</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`;
+
+                let filteredData = ALL_DATA.filter(item => { return parseMoney(item.chiqim) > 0 && !item.cat.includes("O'tkazma") && item.cat !== 'Transfer' && checkFilter(item); });
+                filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
+                if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; }
+
+                filteredData.forEach(item => {
+                    let idParam = item.rowId ? `'${item.rowId}'` : "null";
+                    html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold" title="${item.cat}">${truncate(item.cat, 30)}</td><td>${item.pay}</td><td class="fw-bold text-danger fs-5">${fmt(item.chiqim)}</td><td style="white-space:nowrap;"><i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i><i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i></td><td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`;
+                });
+            } else {
+                thead.innerHTML = `<tr><th class="th-dark">№</th><th class="th-dark">Sana</th><th class="th-red">Qayerdan</th><th class="th-green">Qayerga</th><th class="th-red">Chiqim</th><th class="th-green">Kirim</th><th class="th-action">Amal</th><th class="th-dark" ${noteHeaderStyle}>Izoh</th></tr>`;
+
+                let filteredData = ALL_DATA.filter(item => { return (item.cat === "Transfer" || item.cat.includes("O'tkazma")) && checkFilter(item); });
+                filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
+                if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center p-3 text-muted">Ma'lumot topilmadi</td></tr>`; return; }
+
+                filteredData.forEach(item => {
+                    let idParam = item.rowId ? `'${item.rowId}'` : "null";
+                    let fromTxt = "-"; let toTxt = "-";
+                    if (item.pay && item.pay.includes('->')) { let p = item.pay.split('->'); fromTxt = p[0]; toTxt = p[1]; }
+
+                    let canEdit = (!CURRENT_PERMS || CURRENT_PERMS.admin || (CURRENT_PERMS.trans && CURRENT_PERMS.trans.edit));
+                    let canDel = (!CURRENT_PERMS || CURRENT_PERMS.admin || (CURRENT_PERMS.trans && CURRENT_PERMS.trans.del));
+
+                    let actions = '<td style="white-space:nowrap;">';
+                    if (canEdit) actions += `<i class='bx bx-edit text-primary fs-5 cursor-pointer' onclick="editItem(${idParam})"></i>`;
+                    if (canDel) actions += `<i class='bx bx-trash text-danger fs-5 cursor-pointer ms-2' onclick="deleteItem(${idParam})"></i>`;
+                    actions += '</td>';
+
+                    html += `<tr><td>${index++}</td><td style="white-space:nowrap;">${formatDate(item.date)}</td><td class="fw-bold text-danger">${fromTxt}</td><td class="fw-bold text-success">${toTxt}</td><td class="fw-bold text-danger">${fmt(item.chiqim)}</td><td class="fw-bold text-success">${fmt(item.kirim)}</td>${actions}<td class="text-muted small" ${noteStyle}>${item.note || ''}</td></tr>`;
+                });
+            }
+            tbody.innerHTML = html;
+        } catch (err) {
+            console.error("Render Error:", err);
+            document.getElementById('table-body').innerHTML = `<tr><td colspan="11" class="text-danger p-3">Xatolik: ${err.message}</td></tr>`;
+        }
+    }
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+
+        const type = document.getElementById('currentTab').value;
+        const mode = document.getElementById('formMode').value;
+        const dateVal = document.getElementById('dateInput').value;
+        const note = document.getElementById('noteInput').value;
+        const point = document.getElementById('d-point').value;
+
+        if (!dateVal) {
+            Swal.fire({ title: 'Xatolik!', text: 'Iltimos, sanani tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+        }
+
+        if (type === 'Kirim') {
+            if (!point || point === "") {
+                Swal.fire({ title: 'Diqqat!', text: 'Iltimos, SAVDO NUQTASINI tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+            }
+
+            let hasMoney = false;
+            let totalKirim = 0;
+            let inputs = document.querySelectorAll('.pay-input');
+            for (let inp of inputs) {
+                let v = parseFloat(inp.value) || 0;
+                if (v > 0) hasMoney = true;
+                totalKirim += v;
+            }
+            if (totalKirim > LIMIT_SUMMA) {
+                Swal.fire({ title: 'Xatolik!', text: `Jami summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' });
+                return;
+            }
+            if (!hasMoney) {
+                Swal.fire({ title: 'Diqqat!', text: 'Iltimos, kamida bitta to\'lov summasini kiriting (Naqd, P2P va h.k)!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+            }
+        }
+
+        else if (type === 'Chiqim') {
+            let amount = parseFloat(document.getElementById('single-amount').value) || 0;
+            let cat = document.getElementById('d-cat').value;
+            let pay = document.getElementById('d-pay').value;
+
+            if (amount <= 0) { Swal.fire({ title: 'Diqqat!', text: 'Chiqim summasini kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+            if (amount > LIMIT_SUMMA) { Swal.fire({ title: 'Xatolik!', text: `Summa 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return; }
+
+            if (!cat || cat === "") { Swal.fire({ title: 'Diqqat!', text: 'Iltimos, KATEGORIYAni tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+            if (!pay || pay === "") { Swal.fire({ title: 'Diqqat!', text: 'Iltimos, TO\'LOV TURIni tanlang!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+        }
+
+        else if (type === 'Otkazma') {
+            let amount = parseFloat(document.getElementById('single-amount').value) || 0;
+            let usdAmount = parseFloat(document.getElementById('second-amount').value) || 0;
+            let from = document.getElementById('transfer-from').value;
+            let to = document.getElementById('transfer-to').value;
+
+            if (!from || from === "") { Swal.fire({ title: 'Diqqat!', text: '"Qayerdan" maydoni bo\'sh bo\'lishi mumkin emas!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+            if (!to || to === "") { Swal.fire({ title: 'Diqqat!', text: '"Qayerga" maydoni bo\'sh bo\'lishi mumkin emas!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+            if (from === to) { Swal.fire({ title: 'Xatolik!', text: 'Bir xil hisoblar o\'rtasida o\'tkazma qilib bo\'lmaydi!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return; }
+
+            if (from === 'Dollar' || to === 'Dollar') {
+                if (usdAmount <= 0) {
+                    Swal.fire({ title: 'Diqqat!', text: 'Iltimos, Dollar summasini (USD) kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+                }
+                if (usdAmount > LIMIT_SUMMA) {
+                    Swal.fire({ title: 'Xatolik!', text: `Dollar summasi 999 999 999 USDdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return;
+                }
+            }
+
+            if (amount <= 0) {
+                Swal.fire({ title: 'Diqqat!', text: 'Iltimos, So\'m summasini (UZS) kiriting!', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+            }
+            if (amount > LIMIT_SUMMA) {
+                Swal.fire({ title: 'Xatolik!', text: `So'm summasi(UZS) 999 999 999 so'mdan katta bo'lishi mumkin emas!`, icon: 'error', confirmButtonColor: '#d33' }); return;
+            }
+        }
+
+        if (note.length > LIMIT_IZOH) {
+            Swal.fire({ title: 'Diqqat!', text: `Izoh juda uzun! Maksimum ${LIMIT_IZOH} ta belgi!`, icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' }); return;
+        }
+
+        let formData = {
+            rowId: document.getElementById('editRowId').value,
+            formMode: mode,
+            type: type,
+            date: dateVal,
+            point: point,
+            firm: "",
+            note: note
+        };
+
+        if (mode === 'add') {
+            formData.rowId = new Date().getTime().toString();
+        }
+
+        if (type === 'Kirim') {
+            let payments = {};
+            let inputs = document.querySelectorAll('.pay-input');
+            for (let inp of inputs) {
+                let v = parseFloat(inp.value) || 0;
+                if (v > 0) payments[inp.getAttribute('data-type')] = v;
+            }
+            formData.payments = payments;
+        } else {
+            formData.amount = parseFloat(document.getElementById('single-amount').value) || 0;
+            if (type === 'Chiqim') {
+                formData.category = document.getElementById('d-cat').value;
+                formData.payment = document.getElementById('d-pay').value;
+            } else if (type === 'Otkazma') {
+                formData.amountIn = parseFloat(document.getElementById('second-amount').value) || 0;
+                formData.transferFrom = document.getElementById('transfer-from').value;
+                formData.transferTo = document.getElementById('transfer-to').value;
+                formData.point = "O'tkazma";
+            }
+        }
+
+
+
+        // Dollar Conversion Logic for Chiqim
+        if (type === 'Chiqim' && formData.payment === 'Dollar') {
+            if (CURRENT_USD_RATE <= 0) {
+                Swal.fire({ title: 'Diqqat!', text: 'Valyuta kursi yuklanmagan! Iltimos, kuting yoki qayta urining.', icon: 'warning', iconColor: '#d33', confirmButtonColor: '#d33' });
+                return;
+            }
+            let original = formData.amount;
+            formData.originalUSD = original;
+            formData.amount = original * CURRENT_USD_RATE;
+            formData.note = (formData.note || "") + ` (Aslida: $${original} @ ${CURRENT_USD_RATE})`;
+        }
+
+        updateLocalDataOptimistically(formData);
+        transModal.hide();
+
+        Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
+
+        google.script.run.withSuccessHandler(function () {
+            loadDashboard();
+            loadBalances();
+        }).withFailureHandler(function (err) {
+            Swal.fire({ icon: 'error', title: 'Server Xatoligi!', text: 'Ma\'lumot saqlanmadi. Sahifa yangilanmoqda...' });
+            refreshList();
+        }).saveTransaction(formData);
+    }
+
+    function updateLocalDataOptimistically(data) {
+        if (data.formMode === 'edit') {
+            ALL_DATA = ALL_DATA.filter(item => item.rowId != data.rowId);
+        }
+
+        if (data.type === 'Kirim') {
+            for (let payType in data.payments) {
+                ALL_DATA.push({
+                    date: data.date, firm: data.firm, point: data.point, cat: "Savdo tushumi", pay: payType,
+                    kirim: data.payments[payType], chiqim: 0, note: data.note, rowId: data.rowId
+                });
+            }
+        } else if (data.type === 'Chiqim') {
+            ALL_DATA.push({
+                date: data.date, firm: data.firm, point: data.point, cat: data.category, pay: data.payment,
+                kirim: 0, chiqim: data.amount, note: data.note, rowId: data.rowId
+            });
+        } else if (data.type === 'Otkazma') {
+            let mainAmount = data.amount;
+            let usdAmount = data.amountIn || 0;
+            let source = data.transferFrom;
+            let dest = data.transferTo;
+
+            let finalChiqim = (source === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+            let finalKirim = (dest === 'Dollar' && usdAmount > 0) ? usdAmount : mainAmount;
+
+            ALL_DATA.push({
+                date: data.date, firm: "", point: "O'tkazma", cat: "Transfer", pay: source + " -> " + dest,
+                kirim: finalKirim, chiqim: finalChiqim, note: data.note, rowId: data.rowId
+            });
+        }
+
+        renderCurrentView();
+        calculateLocalBalance();
+    }
+
+    function openModal(mode) {
+        document.getElementById('mainForm').reset();
+        document.getElementById('formMode').value = mode;
+        let now = new Date();
+        let today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const dateInput = document.getElementById('dateInput');
+        dateInput.value = today;
+        dateInput.max = today;
+
+        if (document.getElementById('batch-total')) document.getElementById('batch-total').innerText = "0";
+        transModal = new bootstrap.Modal(document.getElementById('transModal'));
+        setupFormUI(CURRENT_TYPE);
+        if (mode === 'add') {
+            document.getElementById('modalTitle').innerText = "Yangi " + CURRENT_TYPE + " Qo'shish";
+            document.getElementById('editRowId').value = "";
+        }
+        transModal.show();
+    }
+
+    function setupFormUI(type) {
+        document.getElementById('currentTab').value = type;
+
+        ['form-kirim', 'form-single'].forEach(id => document.getElementById(id).style.display = 'none');
+
+        document.getElementById('div-second-amount').style.display = 'none';
+        document.getElementById('dollar-warning-box').style.display = 'none'; // Reset Dollar Warning
+
+        document.getElementById('div-point').style.display = (type === 'Kirim') ? 'block' : 'none';
+
+        if (type === 'Kirim') {
+            document.getElementById('form-kirim').style.display = 'block';
+        } else {
+            document.getElementById('form-single').style.display = 'block';
+
+            document.getElementById('div-cat').style.display = (type === 'Chiqim') ? 'block' : 'none';
+            document.getElementById('div-pay').style.display = (type === 'Chiqim') ? 'block' : 'none';
+
+            document.getElementById('div-transfer-fields').style.display = (type === 'Otkazma') ? 'block' : 'none';
+
+            document.getElementById('label-amount-main').innerText = (type === 'Otkazma') ? "SUMMA (UZS)" : "SUMMA";
+        }
+    }
+    function editGroup(index) { let item = GROUPED_DATA[index]; if (!item) return; setTransactionType('Kirim'); openModal('edit'); document.getElementById('modalTitle').innerText = "Tahrirlash"; document.getElementById('editRowId').value = item.rowId; document.getElementById('dateInput').value = formatDateISO(item.date); document.getElementById('d-point').value = item.point; document.getElementById('noteInput').value = item.note; setPayInput('Naqd', item.naqd); setPayInput('P2P', item.p2p); setPayInput('Uzcard', item.uzcard); setPayInput('Humo', item.humo); setPayInput('Perechislenie', item.perech); calcBatchTotal(); }
+    function editItem(rowId) {
+        const item = ALL_DATA.find(r => r.rowId == rowId);
+        if (!item) return;
+
+        let type = (item.cat === 'Transfer' || item.cat.includes("O'tkazma")) ? 'Otkazma' : 'Chiqim';
+        setTransactionType(type);
+        openModal('edit');
+        document.getElementById('modalTitle').innerText = "Tahrirlash";
+        document.getElementById('editRowId').value = rowId;
+        document.getElementById('dateInput').value = formatDateISO(item.date);
+        document.getElementById('noteInput').value = item.note;
+
+        if (type === 'Chiqim') {
+            document.getElementById('single-amount').value = parseMoney(item.chiqim);
+            document.getElementById('d-pay').value = item.pay;
+            document.getElementById('d-cat').value = item.cat;
+            setTimeout(updateDollarValuation, 100); // Trigger valuation check
+        } else {
+            let k = parseMoney(item.kirim);
+            let c = parseMoney(item.chiqim);
+            let val = (k > c) ? k : c;
+
+            if (item.pay && item.pay.includes('->')) {
+                let parts = item.pay.split('->');
+                let from = parts[0].trim();
+                let to = parts[1].trim();
+
+                document.getElementById('transfer-from').value = from;
+                document.getElementById('transfer-to').value = to;
+
+                checkTransferCurrency();
+
+                if (from === 'Dollar' || to === 'Dollar') {
+                    document.getElementById('second-amount').value = val;
+                    document.getElementById('single-amount').value = "";
+                } else {
+                    document.getElementById('single-amount').value = val;
+                    document.getElementById('second-amount').value = "";
+                }
+            }
+        }
+    }
+
+    function deleteItem(rowId) {
+        if (!rowId) return;
+        Swal.fire({
+            title: 'Haqiqatdan ham ushbu elementni o\'chirishni xohlaysizmi?',
+            icon: 'warning',
+            iconColor: '#d33',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#198754',
+            confirmButtonText: 'Ha',
+            cancelButtonText: 'Yo\'q'
+        }).then((r) => {
+            if (r.isConfirmed) {
+                ALL_DATA = ALL_DATA.filter(item => item.rowId != rowId);
+                renderCurrentView();
+                calculateLocalBalance();
+
+                Swal.fire({ icon: 'success', title: 'Muvaffaqiyatli!', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+
+                google.script.run
+                    .withSuccessHandler(() => { loadDashboard(); })
+                    .withFailureHandler((err) => { Swal.fire({ icon: 'error', title: 'Xatolik!', text: 'Internet bilan aloqa yo\'q!' }); refreshList(); })
+                    .deleteTransaction(rowId);
+            }
+        });
+    }
+
+    function refreshDropdowns(btn) {
+
+        const icon = btn.querySelector('i');
+        if (icon) icon.classList.add('bx-spin');
+        btn.disabled = true;
+
+
+        if (typeof loadDropdowns === 'function') {
+            loadDropdowns();
+        }
+
+
+        if (typeof refreshList === 'function') {
+            refreshList(true); // true = silent mode (loading ko'rsatmasdan)
+        }
+
+
+        setTimeout(() => {
+            if (icon) icon.classList.remove('bx-spin');
+            btn.disabled = false;
+
+            // Kichik xabar
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 1000
+            });
+            Toast.fire({ icon: 'success', title: 'Yangilandi!' });
+        }, 800);
+    }
+
+    function updateDollarValuation() {
+        const type = document.getElementById('currentTab').value;
+        const pay = document.getElementById('d-pay').value;
+
+        // Ensure we are in Chiqim mode and Payment is Dollar
+        if (type === 'Chiqim' && pay === 'Dollar') {
+            const dateVal = document.getElementById('dateInput').value;
+            if (!dateVal) return;
+
+            // Fetch rate ONLY if date changed or we don't have a rate yet
+            if (LAST_FETCH_QUERY_DATE !== dateVal || CURRENT_USD_RATE <= 0) {
+                // Show loading state
+                document.getElementById('dollar-warning-box').style.display = 'block';
+                document.getElementById('dollar-conversion-calc').innerHTML = '<i class="bx bx-loader bx-spin"></i> Kurs yuklanmoqda...';
+
+                LAST_FETCH_QUERY_DATE = dateVal; // Mark as fetching/fetched for this date
+
+                google.script.run.withSuccessHandler(function (data) {
+                    if (data && data.rate > 0) {
+                        CURRENT_USD_RATE = data.rate;
+                        LAST_CHECKED_RATE_DATE = data.date;
+                        _recalcDollarDisplay();
+                    } else {
+                        let errMsg = (data && data.error) ? data.error : 'Kurs aniqlanmadi';
+                        document.getElementById('dollar-conversion-calc').innerHTML = `<span class="text-danger"><b>Xatolik:</b> ${errMsg}. <br><small>Iltimos, internetni tekshiring yoki keyinroq urining.</small></span>`;
+                        CURRENT_USD_RATE = 0;
+                    }
+                }).getCurrencyRate(dateVal);
+            } else {
+                _recalcDollarDisplay();
+            }
+        } else {
+            document.getElementById('dollar-warning-box').style.display = 'none';
+        }
+    }
+
+    function _recalcDollarDisplay() {
+        const amount = parseFloat(document.getElementById('single-amount').value) || 0;
+        const uzsTotal = amount * CURRENT_USD_RATE;
+
+        // Show box
+        document.getElementById('dollar-warning-box').style.display = 'block';
+
+        // Update Text
+        document.getElementById('dollar-conversion-text').innerText = `"Dollar"dagi "Chiqim"lar ${LAST_CHECKED_RATE_DATE} kungi MB kursi (${fmt(CURRENT_USD_RATE)}) bo'yicha hisoblanadi.`;
+        document.getElementById('dollar-conversion-calc').innerText = `Jami summa(UZS): ${fmt(uzsTotal)} so'm`;
+    }
+
+
 </script>

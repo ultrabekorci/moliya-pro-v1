@@ -17,35 +17,137 @@ function getAllUsers() {
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var users = [];
+  
+
   for (var i = 1; i < data.length; i++) {
-    users.push({ u: data[i][0], p: data[i][1], r: data[i][2] });
+    var permString = (data[i].length > 4) ? data[i][4] : "";
+    var permissions = {};
+    
+
+    try {
+      if (permString && permString.toString().trim() !== "") {
+        permissions = JSON.parse(permString);
+      } else {
+        if (data[i][2] === 'Admin') permissions = { admin: true }; 
+      }
+    } catch (e) {
+      permissions = {};
+    }
+
+    users.push({ 
+      u: data[i][0], 
+      p: data[i][1], 
+      r: data[i][2], 
+      s: data[i][3] || 'active', 
+      perms: permissions,
+      row: i + 1 
+    });
   }
   return users;
 }
-
 function getFormData() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Data'); 
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Data');
   if (!sheet) return null;
-  var data = sheet.getDataRange().getValues();
   
-  var points = [];
-  var cats = [];
-  var payments = [];
+  // Ma'lumotlarni olish
+  var data = sheet.getDataRange().getValues();
+  var firms = [], points = [], payments = [], cats = [];
+
+
+  function checkStatus(val) {
+    if (!val) return 'active';
+    var s = String(val).trim().toLowerCase();
+    return (s === 'inactive') ? 'inactive' : 'active';
+  }
+
 
   for (var i = 1; i < data.length; i++) {
-    if (data[i][1] && data[i][1] !== "") {
-       points.push(data[i][1]);
+    var row = data[i];
+    var rowId = i + 1;
+
+
+    if (row[0] && String(row[0]).trim() !== '') {
+      firms.push({ 
+        value: String(row[0]).trim(), 
+        status: checkStatus(row.length > 4 ? row[4] : null), 
+        row: rowId
+      });
     }
-    if (data[i][2] && data[i][2] !== "") {
-       payments.push(data[i][2]);
+
+
+    if (row.length > 1 && row[1] && String(row[1]).trim() !== '') {
+      points.push({ 
+        value: String(row[1]).trim(), 
+        status: checkStatus(row.length > 5 ? row[5] : null), 
+        row: rowId 
+      });
     }
-    if (data[i][3] && data[i][3] !== "") {
-       cats.push(data[i][3]);
+
+
+    if (row.length > 2 && row[2] && String(row[2]).trim() !== '') {
+      payments.push({ 
+        value: String(row[2]).trim(), 
+        status: checkStatus(row.length > 6 ? row[6] : null), 
+        row: rowId 
+      });
+    }
+
+
+    if (row.length > 3 && row[3] && String(row[3]).trim() !== '') {
+      cats.push({ 
+        value: String(row[3]).trim(), 
+        status: checkStatus(row.length > 7 ? row[7] : null), 
+        row: rowId 
+      });
     }
   }
   
-  return { points: points, cats: cats, payments: payments };
+  return { firms: firms, points: points, payments: payments, cats: cats };
 }
+
+function saveDataItem(data) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Data');
+  var columnMap = { 'firm': {v:1, s:5}, 'point': {v:2, s:6}, 'payment': {v:3, s:7}, 'category': {v:4, s:8} };
+  var cols = columnMap[data.type];
+  
+  var targetRow;
+
+  if (data.row == -1) {
+    targetRow = sheet.getLastRow() + 1;
+    sheet.getRange(targetRow, cols.v).setValue(data.value);
+    sheet.getRange(targetRow, cols.s).setValue('active');
+  } else {
+    targetRow = parseInt(data.row);
+    sheet.getRange(targetRow, cols.v).setValue(data.value);
+  }
+  
+  SpreadsheetApp.flush();
+  return targetRow;
+}
+
+function toggleDataItemStatus(data) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Data');
+  var columnMap = { 'firm': 5, 'point': 6, 'payment': 7, 'category': 8 };
+  
+  var targetRow = parseInt(data.row);
+  var cell = sheet.getRange(targetRow, columnMap[data.type]);
+  var newStatus = (cell.getValue() === 'active') ? 'inactive' : 'active';
+  
+  cell.setValue(newStatus);
+  return newStatus;
+}
+
+function deleteDataItem(data) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Data');
+  var columnMap = { 'firm': {v:1, s:5}, 'point': {v:2, s:6}, 'payment': {v:3, s:7}, 'category': {v:4, s:8} };
+  var cols = columnMap[data.type];
+  
+  var targetRow = parseInt(data.row);
+  sheet.getRange(targetRow, cols.v).clearContent();
+  sheet.getRange(targetRow, cols.s).clearContent();
+  return "Success";
+}
+
 
 function saveTransaction(data) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kirim Chiqim');
@@ -66,7 +168,8 @@ function saveTransaction(data) {
       } 
       else if (data.type === 'Chiqim') {
         var chiqim = parseFloat(data.amount);
-        rowsToAdd.push([dateStr, firmVal, data.point, data.category, data.payment, 0, chiqim, data.note, batchId]);
+        var originalUSD = (data.payment === 'Dollar' && data.originalUSD) ? data.originalUSD : null;
+        rowsToAdd.push([dateStr, firmVal, data.point, data.category, data.payment, 0, chiqim, data.note, batchId, originalUSD, null]);
       } 
       else if (data.type === 'Otkazma') {
         var mainAmount = parseFloat(data.amount);
@@ -272,10 +375,127 @@ function getRealTimeBalance() {
     } 
     else {
        if (balance.hasOwnProperty(payType)) {
-          balance[payType] += (kirim - chiqim);
+          var val = (kirim - chiqim);
+          
+          // Fix for Dollar expenses converted to UZS
+          // If row[9] (Source/OriginalUSD) exists for a Dollar expense, use it as the deduction
+          if (payType === 'Dollar' && category !== "O'tkazma" && category !== "Transfer" && row[9]) {
+              var originalVal = parseFloat(row[9]);
+              if (originalVal > 0) val = -originalVal;
+          }
+          
+          balance[payType] += val;
        }
     }
   });
 
   return balance;
+}
+
+
+
+function saveUser(data) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
+  var targetRow;
+  var permJson = JSON.stringify(data.permissions || {});
+
+  if (data.row == -1) {
+    targetRow = sheet.getLastRow() + 1;
+
+    sheet.getRange(targetRow, 1, 1, 5).setValues([[data.login, data.password, data.role, 'active', permJson]]);
+  } else {
+
+    targetRow = parseInt(data.row);
+
+    sheet.getRange(targetRow, 1, 1, 3).setValues([[data.login, data.password, data.role]]);
+    sheet.getRange(targetRow, 5).setValue(permJson);
+  }
+  
+  SpreadsheetApp.flush();
+  return targetRow;
+}
+
+function toggleUserStatus(row) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
+  var targetRow = parseInt(row);
+  
+
+  var cell = sheet.getRange(targetRow, 4);
+  var currentStatus = cell.getValue();
+  
+
+
+
+  var newStatus = (currentStatus === 'inactive') ? 'active' : 'inactive';
+  cell.setValue(newStatus);
+  
+  return newStatus;
+}
+
+function deleteUser(row) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
+
+  sheet.deleteRow(parseInt(row));
+  return "Success";
+}
+
+function getCurrencyRate(dateStr) {
+  try {
+    var url = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/all/" + dateStr + "/";
+    var response = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    
+    var rate = 0;
+    var rateDate = "";
+    
+    if (response.getResponseCode() === 200) {
+        var json = JSON.parse(response.getContentText());
+        if (Array.isArray(json)) {
+            for (var i = 0; i < json.length; i++) {
+                if (json[i].Ccy === 'USD') {
+                    rate = parseFloat(json[i].Rate) || 0;
+                    rateDate = json[i].Date;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (rate === 0) {
+        var urlLatest = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/";
+        var respLatest = UrlFetchApp.fetch(urlLatest, {muteHttpExceptions: true});
+        if (respLatest.getResponseCode() === 200) {
+            var jsonLatest = JSON.parse(respLatest.getContentText());
+            if (Array.isArray(jsonLatest)) {
+              for (var i = 0; i < jsonLatest.length; i++) {
+                  if (jsonLatest[i].Ccy === 'USD') {
+                      rate = parseFloat(jsonLatest[i].Rate) || 0;
+                      rateDate = jsonLatest[i].Date;
+                      break;
+                  }
+              }
+            }
+        }
+    }
+
+    if (rate === 0) return { rate: 0, date: "", error: "USD Not Found (Date & Latest failed)" };
+    
+    return {
+        rate: rate,
+        date: rateDate // Return the date of the rate we found (either specific or latest)
+    };
+
+  } catch (e) {
+    Logger.log("Error fetching rate: " + e.toString());
+    return { rate: 0, date: "", error: "Exception: " + e.toString() };
+  }
+}
+
+// *** MUHIM: RUXSATLARI YANGILASH UCHUN ***
+// Ushbu funksiyani yuqoridagi menyudan tanlab "Run" tugmasini bosing
+// Bu sizdan 'UrlFetchApp' (internetga ulanish) uchun ruxsat so'raydi.
+function authorizeScript() {
+  var url = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/";
+  console.log("Ruxsat tekshirilmoqda...");
+  var response = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+  console.log("Ruxsat mavjud! Javob kodi: " + response.getResponseCode());
 }
