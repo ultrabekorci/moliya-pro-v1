@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
   <head>
     <base target="_top" />
@@ -46,7 +46,9 @@
       body {
         background-color: var(--body-bg);
         color: var(--text-main);
-        transition: background-color 0.3s ease, color 0.3s ease;
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease;
       }
 
       body.dark-mode {
@@ -388,7 +390,9 @@
         box-shadow: 0 10px 40px var(--shadow-color);
         border: 1px solid var(--border-color);
         margin-bottom: 40px;
-        transition: background 0.3s, border 0.3s;
+        transition:
+          background 0.3s,
+          border 0.3s;
       }
 
       .hero-badge {
@@ -454,7 +458,9 @@
         height: 100%;
         box-shadow: 0 5px 20px var(--shadow-color);
         border: 1px solid #e2e8f0;
-        transition: transform 0.3s, background 0.3s;
+        transition:
+          transform 0.3s,
+          background 0.3s;
       }
 
       .bento-pro:hover {
@@ -638,7 +644,10 @@
             <a
               href="javascript:void(0);"
               class="nav-link active"
-              onclick="switchTab('dashboard', this); document.getElementById('header-title').innerText = 'Dashboard'"
+              onclick="
+                switchTab('dashboard', this);
+                document.getElementById('header-title').innerText = 'Dashboard';
+              "
             >
               <i class="bx bx-grid-alt"></i
               ><span class="links_name">Dashboard</span>
@@ -650,7 +659,11 @@
               href="javascript:void(0);"
               class="nav-link"
               id="link-list"
-              onclick="switchTab('list', this); document.getElementById('header-title').innerText = 'Kirim / Chiqim'"
+              onclick="
+                switchTab('list', this);
+                document.getElementById('header-title').innerText =
+                  'Kirim / Chiqim';
+              "
             >
               <i class="bx bx-list-ul"></i
               ><span class="links_name">Kirim / Chiqim</span>
@@ -661,7 +674,11 @@
             <a
               href="javascript:void(0);"
               class="nav-link"
-              onclick="switchTab('settings', this); document.getElementById('header-title').innerText = 'Sozlamalar'"
+              onclick="
+                switchTab('settings', this);
+                document.getElementById('header-title').innerText =
+                  'Sozlamalar';
+              "
             >
               <i class="bx bx-cog"></i
               ><span class="links_name">Sozlamalar</span>
@@ -672,7 +689,10 @@
             <a
               href="javascript:void(0);"
               class="nav-link"
-              onclick="switchTab('about', this); document.getElementById('header-title').innerText = 'About'"
+              onclick="
+                switchTab('about', this);
+                document.getElementById('header-title').innerText = 'About';
+              "
             >
               <i class="bx bx-info-circle"></i>
               <span class="links_name">About</span>
@@ -801,7 +821,7 @@
                         class="rounded-circle shadow-sm border border-3 border-white"
                         style="width: 100px; height: 100px; object-fit: cover"
                         alt="Ultrabekorci"
-                        onerror="this.src='https://via.placeholder.com/100'"
+                        onerror="this.src = 'https://via.placeholder.com/100'"
                       />
                     </div>
                     <div class="w-100">
@@ -882,7 +902,7 @@
             document.getElementById("main-app").style.display = "block";
 
             let savedPerms = JSON.parse(
-              sessionStorage.getItem("moliya_perms") || "{}"
+              sessionStorage.getItem("moliya_perms") || "{}",
             );
             applyPermissions(savedPerms);
             loadDashboard();
@@ -941,7 +961,7 @@
         var err = document.getElementById("loginError");
 
         var foundUser = LOCAL_USERS_DB.find(
-          (user) => user.u === u && user.p === p
+          (user) => user.u === u && user.p === p,
         );
 
         if (foundUser) {
@@ -957,7 +977,7 @@
           sessionStorage.setItem("moliya_role", foundUser.r);
           sessionStorage.setItem(
             "moliya_perms",
-            JSON.stringify(foundUser.perms || {})
+            JSON.stringify(foundUser.perms || {}),
           );
           sessionStorage.setItem("moliya_last_activity", Date.now().toString());
 
@@ -1093,7 +1113,7 @@
       window.onclick = function (event) {
         if (!event.target.closest(".profile-trigger")) {
           var dropdowns = document.getElementsByClassName(
-            "profile-dropdown-content"
+            "profile-dropdown-content",
           );
           for (var i = 0; i < dropdowns.length; i++) {
             var openDropdown = dropdowns[i];

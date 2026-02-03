@@ -112,9 +112,13 @@
 
 <div class="container-fluid p-0">
   <div class="dash-filter-bar d-flex flex-wrap gap-3 align-items-end">
-    <div style="min-width: 200px;">
+    <div style="min-width: 200px">
       <label class="small fw-bold mb-1">Vaqt oralig'i</label>
-      <select id="filter-period" class="form-select shadow-sm" onchange="applyDashFilters()">
+      <select
+        id="filter-period"
+        class="form-select shadow-sm"
+        onchange="applyDashFilters()"
+      >
         <option value="this_month" selected>Joriy Oy</option>
         <option value="last_month">O'tgan Oy</option>
         <option value="this_year">Joriy Yil</option>
@@ -126,17 +130,31 @@
     <div id="custom-date-box" class="d-none d-flex gap-2">
       <div>
         <label class="small fw-bold mb-1">Dan</label>
-        <input type="date" id="date-start" class="form-control shadow-sm" onchange="applyDashFilters()">
+        <input
+          type="date"
+          id="date-start"
+          class="form-control shadow-sm"
+          onchange="applyDashFilters()"
+        />
       </div>
       <div>
         <label class="small fw-bold mb-1">Gacha</label>
-        <input type="date" id="date-end" class="form-control shadow-sm" onchange="applyDashFilters()">
+        <input
+          type="date"
+          id="date-end"
+          class="form-control shadow-sm"
+          onchange="applyDashFilters()"
+        />
       </div>
     </div>
 
-    <div style="min-width: 200px;">
+    <div style="min-width: 200px">
       <label class="small fw-bold mb-1">Firma </label>
-      <select id="filter-firm" class="form-select shadow-sm" onchange="applyDashFilters()">
+      <select
+        id="filter-firm"
+        class="form-select shadow-sm"
+        onchange="applyDashFilters()"
+      >
         <option value="all" selected>Umumiy</option>
         <option value="Greenpen">Greenpen</option>
         <option value="Smartmiz">Smartmiz</option>
@@ -144,8 +162,9 @@
     </div>
 
     <div class="ms-auto text-end">
-      <button class="btn btn-primary shadow-sm" onclick="loadDashboard()"><i class='bx bx-refresh'></i>
-        Yangilash</button>
+      <button class="btn btn-primary shadow-sm" onclick="loadDashboard()">
+        <i class="bx bx-refresh"></i> Yangilash
+      </button>
     </div>
   </div>
 
@@ -158,7 +177,9 @@
             <div class="kpi-value" id="kpi-income">0</div>
             <div class="kpi-trend" id="trend-income"></div>
           </div>
-          <div class="kpi-icon bg-indigo-light"><i class='bx bx-trending-up'></i></div>
+          <div class="kpi-icon bg-indigo-light">
+            <i class="bx bx-trending-up"></i>
+          </div>
         </div>
       </div>
     </div>
@@ -171,7 +192,9 @@
             <div class="kpi-value text-danger" id="kpi-expense">0</div>
             <div class="kpi-trend" id="trend-expense"></div>
           </div>
-          <div class="kpi-icon bg-rose-light"><i class='bx bx-trending-down'></i></div>
+          <div class="kpi-icon bg-rose-light">
+            <i class="bx bx-trending-down"></i>
+          </div>
         </div>
       </div>
     </div>
@@ -184,7 +207,9 @@
             <div class="kpi-value" id="kpi-net-cash">0</div>
             <div class="kpi-trend" id="trend-profit"></div>
           </div>
-          <div class="kpi-icon bg-emerald-light"><i class='bx bx-wallet'></i></div>
+          <div class="kpi-icon bg-emerald-light">
+            <i class="bx bx-wallet"></i>
+          </div>
         </div>
       </div>
     </div>
@@ -197,7 +222,9 @@
             <div class="kpi-value text-warning" id="kpi-cash-ratio">0%</div>
             <div class="kpi-trend" id="trend-cash"></div>
           </div>
-          <div class="kpi-icon bg-amber-light"><i class='bx bx-pie-chart-alt-2'></i></div>
+          <div class="kpi-icon bg-amber-light">
+            <i class="bx bx-pie-chart-alt-2"></i>
+          </div>
         </div>
       </div>
     </div>
@@ -207,9 +234,12 @@
     <div class="col-lg-8">
       <div class="chart-box">
         <div class="chart-title">
-          <span><i class='bx bx-line-chart text-primary me-2'></i> Kirim vs Chiqim</span>
+          <span
+            ><i class="bx bx-line-chart text-primary me-2"></i> Kirim vs
+            Chiqim</span
+          >
         </div>
-        <div style="height: 300px;">
+        <div style="height: 300px">
           <canvas id="chartTrend"></canvas>
         </div>
       </div>
@@ -218,24 +248,33 @@
     <div class="col-lg-4">
       <div class="chart-box">
         <div class="chart-title">
-          <span><i class='bx bx-pie-chart-alt-2 text-danger me-2'></i> Top 5 Xarajatlar</span>
+          <span
+            ><i class="bx bx-pie-chart-alt-2 text-danger me-2"></i> Top 5
+            Xarajatlar</span
+          >
         </div>
 
         <div class="d-flex align-items-center justify-content-between">
-          <div style="width: 60%; height: 280px; position: relative;">
+          <div style="width: 60%; height: 280px; position: relative">
             <canvas id="chartExpenses"></canvas>
           </div>
-          <div style="width: 40%; padding-left: 10px;" class="text-end">
+          <div style="width: 40%; padding-left: 10px" class="text-end">
             <div class="mb-4">
               <span class="text-muted small fw-bold d-block">TOP-5 JAMI:</span>
-              <span id="top5-sum-display" class="fw-bold text-dark fs-5">0</span>
+              <span id="top5-sum-display" class="fw-bold text-dark fs-5"
+                >0</span
+              >
             </div>
             <div>
               <span class="text-muted small fw-bold d-block">ULUSHI:</span>
-              <span id="top5-percent-display" class="fw-bolder text-danger fs-2">0%</span>
+              <span id="top5-percent-display" class="fw-bolder text-danger fs-2"
+                >0%</span
+              >
             </div>
             <div class="mt-2">
-              <small class="text-muted" style="font-size: 10px;">Jami xarajatga nisbatan</small>
+              <small class="text-muted" style="font-size: 10px"
+                >Jami xarajatga nisbatan</small
+              >
             </div>
           </div>
         </div>
@@ -247,9 +286,12 @@
     <div class="col-12">
       <div class="chart-box">
         <div class="chart-title">
-          <span><i class='bx bx-bar-chart-square text-danger me-2'></i> Xarajatlar (kategoriya bo'yicha)</span>
+          <span
+            ><i class="bx bx-bar-chart-square text-danger me-2"></i> Xarajatlar
+            (kategoriya bo'yicha)</span
+          >
         </div>
-        <div style="height: 400px;">
+        <div style="height: 400px">
           <canvas id="chartAllExpenses"></canvas>
         </div>
       </div>
@@ -260,9 +302,12 @@
     <div class="col-lg-6">
       <div class="chart-box">
         <div class="chart-title">
-          <span><i class='bx bx-building-house text-primary me-2'></i> Firmalar Tushumi</span>
+          <span
+            ><i class="bx bx-building-house text-primary me-2"></i> Firmalar
+            Tushumi</span
+          >
         </div>
-        <div style="height: 300px;">
+        <div style="height: 300px">
           <canvas id="chartPoints"></canvas>
         </div>
       </div>
@@ -271,14 +316,24 @@
     <div class="col-lg-6">
       <div class="chart-box">
         <div class="chart-title">
-          <span><i class='bx bx-doughnut-chart text-warning me-2'></i> To'lov Turlari </span>
+          <span
+            ><i class="bx bx-doughnut-chart text-warning me-2"></i> To'lov
+            Turlari
+          </span>
         </div>
         <div class="d-flex align-items-center">
-          <div style="width: 50%; height: 260px; position: relative;">
+          <div style="width: 50%; height: 260px; position: relative">
             <canvas id="chartPayments"></canvas>
           </div>
-          <div id="pay-legend-container" style="width: 50%; padding-left: 20px; max-height: 260px; overflow-y: auto;">
-          </div>
+          <div
+            id="pay-legend-container"
+            style="
+              width: 50%;
+              padding-left: 20px;
+              max-height: 260px;
+              overflow-y: auto;
+            "
+          ></div>
         </div>
       </div>
     </div>
@@ -288,19 +343,32 @@
     <div class="col-12">
       <div class="chart-box">
         <div class="chart-title">
-          <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
-            <span><i class='bx bx-stats text-primary me-2'></i> Savdo nuqtasi dinamikasi (Kirim)</span>
+          <div
+            class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2"
+          >
+            <span
+              ><i class="bx bx-stats text-primary me-2"></i> Savdo nuqtasi
+              dinamikasi (Kirim)</span
+            >
             <div class="text-center">
-              <span class="text-muted small fw-bold me-2">Tanlangan davr uchun jami:</span>
-              <span id="specific-point-total" class="text-primary fw-bold fs-6">0 so'm</span>
+              <span class="text-muted small fw-bold me-2"
+                >Tanlangan davr uchun jami:</span
+              >
+              <span id="specific-point-total" class="text-primary fw-bold fs-6"
+                >0 so'm</span
+              >
             </div>
-            <select id="chart-point-select" class="form-select form-select-sm border-primary text-primary fw-bold"
-              style="width: 200px; cursor: pointer;" onchange="renderSpecificPointChart()">
+            <select
+              id="chart-point-select"
+              class="form-select form-select-sm border-primary text-primary fw-bold"
+              style="width: 200px; cursor: pointer"
+              onchange="renderSpecificPointChart()"
+            >
               <option>Yuklanmoqda...</option>
             </select>
           </div>
         </div>
-        <div style="height: 350px;">
+        <div style="height: 350px">
           <canvas id="chartSpecific"></canvas>
         </div>
       </div>
@@ -309,9 +377,11 @@
 
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
     <div class="card-header bg-white py-3">
-      <h6 class="mb-0 fw-bold"><i class='bx bx-table'></i> So'nggi operatsiyalar</h6>
+      <h6 class="mb-0 fw-bold">
+        <i class="bx bx-table"></i> So'nggi operatsiyalar
+      </h6>
     </div>
-    <div class="table-responsive" style="max-height: 400px;">
+    <div class="table-responsive" style="max-height: 400px">
       <table class="table table-hover align-middle mb-0 text-center small">
         <thead class="table-light sticky-top">
           <tr>

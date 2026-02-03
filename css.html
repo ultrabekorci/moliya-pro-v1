@@ -224,7 +224,8 @@
   }
 
   .about-pro {
-    background: radial-gradient(circle at top right, #e0e7ff, transparent 40%),
+    background:
+      radial-gradient(circle at top right, #e0e7ff, transparent 40%),
       radial-gradient(circle at bottom left, #ecfeff, transparent 40%);
   }
 
@@ -499,5 +500,13 @@
 
   body.dark-mode .chart-box .text-dark {
     color: #ffffff !important;
+  }
+
+  /* Balance info text - visible in both light and dark mode */
+  .balance-info-text {
+    color: #6c757d;
+  }
+  body.dark-mode .balance-info-text {
+    color: #94a3b8 !important;
   }
 </style>

@@ -43,6 +43,7 @@
     }
 
     if (tabName === "list") {
+      initBalanceDatePicker();
       if (ALL_DATA.length > 0) {
         renderCurrentView();
         calculateLocalBalance();
@@ -171,14 +172,24 @@
     }
   }
 
-  function calculateLocalBalance() {
+  function calculateLocalBalance(asOfDate) {
     let bal = { Naqd: 0, P2P: 0, Dollar: 0, Bank: 0 };
 
     ALL_DATA.forEach((item) => {
+      // If date filter is provided, skip items after that date
+      if (asOfDate) {
+        let itemDate = new Date(item.date);
+        let filterDate = new Date(asOfDate);
+        filterDate.setHours(23, 59, 59, 999);
+        itemDate.setHours(0, 0, 0, 0);
+        if (itemDate > filterDate) return;
+      }
+
       let k = parseMoney(item.kirim);
       let c = parseMoney(item.chiqim);
       let cat = item.cat;
       let pay = item.pay;
+      let note = item.note || "";
 
       if (cat === "Transfer" || cat === "O'tkazma") {
         if (pay && pay.includes("->")) {
@@ -191,7 +202,19 @@
         }
       } else {
         if (bal.hasOwnProperty(pay)) {
-          bal[pay] += k - c;
+          // Dollar chiqimlari uchun izohdan asl USD summasini ajratib olish
+          if (pay === "Dollar" && c > 0 && note.includes("Aslida:")) {
+            // Izohdan "$XXX" ni topish: "(Aslida: $500 @ 12500)"
+            let match = note.match(/Aslida:\s*\$?([\d.,\s]+)/i);
+            if (match) {
+              let usdAmount = parseMoney(match[1]);
+              bal[pay] += k - usdAmount;
+            } else {
+              bal[pay] += k - c;
+            }
+          } else {
+            bal[pay] += k - c;
+          }
         }
       }
     });
@@ -202,6 +225,25 @@
       document.getElementById("bal-p2p").innerText = fmt(bal.P2P) + " so'm";
     if (document.getElementById("bal-dollar"))
       document.getElementById("bal-dollar").innerText = "$ " + fmt(bal.Dollar);
+  }
+
+  function initBalanceDatePicker() {
+    const picker = document.getElementById("balance-date-picker");
+    if (picker) {
+      // Set max to today (prevent future date selection)
+      const today = new Date().toISOString().split("T")[0];
+      picker.max = today;
+      picker.value = today;
+    }
+  }
+
+  function onBalanceDateChange() {
+    const picker = document.getElementById("balance-date-picker");
+    if (picker && picker.value) {
+      calculateLocalBalance(picker.value);
+    } else {
+      calculateLocalBalance();
+    }
   }
 
   function loadBalances() {
@@ -767,8 +809,8 @@
               grid: { display: false },
               ticks: {
                 autoSkip: false,
-                maxRotation: 0,
-                minRotation: 0,
+                maxRotation: 45,
+                minRotation: 45,
                 font: { size: 11, weight: "bold" },
                 color: chartTextColor,
               },
